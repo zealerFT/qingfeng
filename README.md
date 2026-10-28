@@ -17,6 +17,10 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
+**[Download Qingfeng 1.0.2 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.0.2)
+
+macOS 14 or later · Ready-to-run app · No Xcode or compilation required
+
 Qingfeng is a native, offline disk cleanup app for Apple Silicon Macs. It helps you review application caches, developer caches, old logs, and installers, then moves the items you confirm to the macOS Trash. Large files and important data remain available for inspection.
 
 The app is built with **SwiftUI and AppKit**, with no third-party dependencies. Its current interface is **Simplified Chinese**; this repository provides documentation in English and Chinese.
@@ -47,7 +51,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-When a packaged release is available, download `Qingfeng-<version>-AppleSilicon.zip` from [GitHub Releases](https://github.com/zealerFT/qingfeng/releases), extract it, and move `清风.app` to your Applications folder. If no release is listed, use the source build below.
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)** (`Qingfeng-1.0.2-AppleSilicon.zip`).
+2. Double-click the ZIP to extract it, then drag **清风.app** into **Applications**.
+3. Open **清风** from Applications. No developer tools or compilation are needed.
+
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.0.2-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 

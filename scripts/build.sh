@@ -16,5 +16,5 @@ cp Resources/AppIcon.icns Resources/Icon.png "$app_path/Contents/Resources/"
 codesign --force --sign - --timestamp=none "$app_path"
 codesign --verify --deep --strict --verbose=2 "$app_path"
 app_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
-ditto -c -k --sequesterRsrc --keepParent "$app_path" "dist/Qingfeng-${app_version}-AppleSilicon.zip"
+ditto -c -k --norsrc --noextattr --keepParent "$app_path" "dist/Qingfeng-${app_version}-AppleSilicon.zip"
 echo "Built: $app_path"

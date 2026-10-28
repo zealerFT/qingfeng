@@ -17,6 +17,10 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
+**[直接下载清风 1.0.2（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.0.2)
+
+支持 macOS 14 及以上 · 下载即可安装 · 无需 Xcode 或自行编译
+
 清风是一款为 Apple Silicon Mac 开发的原生、离线磁盘空间整理工具。它帮助你查看应用缓存、开发缓存、旧日志与安装包，并将你确认的项目移入系统废纸篓。大文件和重要数据仅供查看。
 
 应用使用 **SwiftUI + AppKit**，无第三方依赖。当前应用界面为**简体中文**，仓库提供英文和中文文档。
@@ -47,7 +51,11 @@
 
 ### 安装包
 
-发布安装包后，可在 [GitHub Releases](https://github.com/zealerFT/qingfeng/releases) 下载 `Qingfeng-<版本>-AppleSilicon.zip`，解压后将 `清风.app` 拖入「应用程序」。如果还没有可下载的 Release，请从源码构建。
+1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)**：`Qingfeng-1.0.2-AppleSilicon.zip`。
+2. 双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」。
+3. 在「应用程序」中打开「**清风**」，无需安装开发工具或编译源码。
+
+[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.0.2-AppleSilicon.zip**。
 
 当前安装包使用 **ad-hoc 本地签名**，**尚未经过 Apple 公证**。如果 macOS 阻止打开你从本仓库下载并信任的应用，可先尝试打开一次，再到「系统设置 → 隐私与安全性」查看是否提供「仍要打开」。也可以自行构建源码。
 
