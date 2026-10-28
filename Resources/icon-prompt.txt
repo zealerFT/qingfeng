@@ -1,0 +1,5 @@
+Generated with Brain built-in brain_image_gen, outputIndex 1, 1024x1024, high quality.
+
+Use case: logo-brand. Create one finished macOS application icon for a native disk space cleaning app called 清风 (Fresh Breeze). Icon only, no words or letters. Premium, calm, immediately legible at 32px. A sculptural milky-white three-blade breeze/swirl symbol with a small four-point sparkle, centered on a deep petrol-teal to jade softly illuminated background. Rounded sculpted form, subtle translucent glass edge, soft studio lighting, refined Apple-like material craft without copying any Apple logo. Strong simple silhouette, generous spacing, no broom, no trash can, no computer illustration, no extra decoration, no watermark. Full-bleed square canvas with background reaching every edge; no exterior frame, no rounded outer corners, no white margin. This will be masked into a macOS rounded-square icon later. Make the white airflow symbol occupy about 60 percent of canvas.
+
+Local packaging: crop source 6% each edge, apply macOS rounded rectangle and subtle shadow; generate PNG/icns. Source retained in Resources/IconSource.
