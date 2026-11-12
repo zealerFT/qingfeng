@@ -67,16 +67,16 @@
 git clone https://github.com/zealerFT/qingfeng.git
 cd qingfeng
 bash scripts/test.sh
-bash scripts/build.sh
-open dist/清风.app
+bash scripts/install.sh
 ```
 
-构建脚本会编译 `arm64` 发布版本、生成图标、应用并校验本地签名，输出：
+安装脚本会编译 `arm64` 发布版本、生成图标、应用并校验本地 ad-hoc 签名，然后把最新版本覆盖安装到 `/Applications/清风.app`。它会把旧的用户「应用程序」副本和临时构建副本移入废纸篓，反复更新不会再生成重复的 Launchpad 图标。可下载的压缩包仍保存在：
 
 ```text
-dist/清风.app
 dist/Qingfeng-<版本>-AppleSilicon.zip
 ```
+
+如果只需要为发布或 CI 生成构建产物，可使用 `bash scripts/build.sh`。
 
 ## 使用方法
 

@@ -67,16 +67,16 @@ On an Apple Silicon Mac with a Swift 6.0+ toolchain:
 git clone https://github.com/zealerFT/qingfeng.git
 cd qingfeng
 bash scripts/test.sh
-bash scripts/build.sh
-open dist/清风.app
+bash scripts/install.sh
 ```
 
-The build script creates an `arm64` release executable, generates the app icon, applies a local ad-hoc signature, verifies it, and produces:
+The install script builds an `arm64` release executable, generates the app icon, applies and verifies a local ad-hoc signature, then replaces the canonical `/Applications/清风.app`. It moves the previous user Applications copy and temporary build bundle to Trash so repeated updates do not create duplicate Launchpad entries. The downloadable archive remains available at:
 
 ```text
-dist/清风.app
 dist/Qingfeng-<version>-AppleSilicon.zip
 ```
+
+Use `bash scripts/build.sh` when you only need build artifacts for packaging or CI.
 
 ## Usage
 

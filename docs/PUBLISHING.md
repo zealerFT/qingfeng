@@ -67,6 +67,8 @@ plutil -lint dist/清风.app/Contents/Info.plist
 codesign --verify --deep --strict --verbose=2 dist/清风.app
 ```
 
+For a local user installation, run `bash scripts/install.sh` instead. It replaces `/Applications/清风.app`, moves the previous user Applications copy and temporary build bundle to Trash, and refreshes Launch Services. Keep `scripts/build.sh` for packaging or CI where installing into the host Applications folder is not desired.
+
 For version 1.0.2, create a GitHub Release with:
 
 - **Tag:** `v1.0.2`, targeting the reviewed `main` commit.
