@@ -53,6 +53,10 @@ move_to_trash() {
     "$launch_services" -u "$source" >/dev/null 2>&1 || true
   fi
   mv "$source" "$target"
+  # Moving a bundle can register its new location; remove the Trash entry too.
+  if [[ -x "$launch_services" ]]; then
+    "$launch_services" -u "$target" >/dev/null 2>&1 || true
+  fi
   echo "Moved old app to Trash: $source"
 }
 
