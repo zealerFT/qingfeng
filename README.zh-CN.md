@@ -17,11 +17,11 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-**[直接下载清风 1.0.2（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.0.2)
+**[直接下载清风 1.1.0（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.1.0)
 
 支持 macOS 14 及以上 · 下载即可安装 · 无需 Xcode 或自行编译
 
-清风是一款为 Apple Silicon Mac 开发的原生、离线磁盘空间整理工具。它帮助你查看应用缓存、开发缓存、旧日志与安装包，并将你确认的项目移入系统废纸篓。大文件和重要数据仅供查看。
+清风是一款为 Apple Silicon Mac 开发的原生、离线磁盘空间整理工具。它帮助你查看应用缓存、开发缓存、旧日志、安装包与个人大文件，并将你确认的项目移入系统废纸篓。重要数据仅供查看。
 
 应用使用 **SwiftUI + AppKit**，无第三方依赖。当前应用界面为**简体中文**，仓库提供英文和中文文档。
 
@@ -29,6 +29,7 @@
 
 - **看清空间占用**：按类别查看磁盘与清理候选，支持搜索和 Finder 定位。
 - **自主确认清理**：默认不勾选任何项目；每次操作都需确认，并重新检查文件属性。
+- **批量整理大文件**：逐项勾选或全选当前可操作的搜索结果，核对路径与总大小后，一起移入废纸篓。
 - **整理开发缓存**：识别 npm、pip、uv、Homebrew、Go、Xcode、JetBrains IDE 和浏览器测试工具的已知缓存。
 - **查看重要数据**：模型、容器存储、设备备份、Xcode 归档和 IDE 本地历史仅展示占用。
 - **调整扫描上限**：单目录可设置 10,000–1,000,000 项，支持输入 `400000`。
@@ -51,11 +52,11 @@
 
 ### 安装包
 
-1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)**：`Qingfeng-1.0.2-AppleSilicon.zip`。
-2. 双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」。
+1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)**：`Qingfeng-1.1.0-AppleSilicon.zip`。
+2. 退出清风，双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」；已有旧版本时选择「**替换**」。
 3. 在「应用程序」中打开「**清风**」，无需安装开发工具或编译源码。
 
-[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.0.2-AppleSilicon.zip**。
+[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.1.0-AppleSilicon.zip**。
 
 当前安装包使用 **ad-hoc 本地签名**，**尚未经过 Apple 公证**。如果 macOS 阻止打开你从本仓库下载并信任的应用，可先尝试打开一次，再到「系统设置 → 隐私与安全性」查看是否提供「仍要打开」。也可以自行构建源码。
 
@@ -88,6 +89,10 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 
 「**勾选较旧项目**」会选择当前列表中至少七天未更新、允许清理且未检测到相关应用运行的项目。仍需逐项确认用途，文件较旧不代表一定不再需要。
 
+### 批量整理大文件
+
+进入「**大文件**」，逐项勾选或点击「**全选当前结果**」，再点击「**批量移入废纸篓**」。检查弹窗中的文件路径，确认不再需要后执行。切换页面会清空勾选，个人文件不会计入总览的缓存可清理空间。用户主目录以外和受保护位置的文件仍仅供查看。
+
 ### 扫描设置
 
 点击右上角齿轮，输入 `400000` 或 `400,000`，再点击「**保存并重新扫描**」。
@@ -109,7 +114,7 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 | JetBrains 缓存 | 每个版本的 `caches`、`index`、`compile-server`、`tmp` | 保留 LocalHistory 和其他 IDE 数据；尽可能按产品与版本检查运行状态。 |
 | 旧日志 | `~/Library/Logs` 下的项目 | 整个项目在最近 30 天内均未更新。 |
 | 旧安装包 | `~/Downloads` 第一层的 `.dmg`、`.pkg`、`.xip` | 至少 30 天未更新；不包含 ZIP 和嵌套安装包。 |
-| 大文件 | 下载、桌面、文稿、影片，或手动选择的文件夹 | 已分配空间至少 200 MB，最多展示最大的 200 项；仅支持 Finder 定位。 |
+| 大文件 | 下载、桌面、文稿、影片，或手动选择的文件夹 | 已分配空间至少 200 MB，最多展示最大的 200 项。用户主目录内的普通文件可勾选，确认后移入废纸篓；受保护位置、应用包、隐藏路径及用户主目录外的文件仅供查看。 |
 | 重要数据 | 已知模型目录、Docker/Podman 存储、设备备份、Xcode 归档、JetBrains LocalHistory、pnpm 共享存储 | 仅统计占用，禁止在清风中清理。 |
 
 清风不提供应用卸载、永久删除、容器 prune，也不清理系统目录、照片库、聊天数据、代码仓库、Keychain 或 Time Machine 备份。包含符号链接或特殊文件的候选项目不能清理。
@@ -145,7 +150,7 @@ scripts/                 测试、构建与图标生成脚本
 docs/                    截图与发布说明
 ```
 
-执行 `bash scripts/test.sh` 运行独立的 `QingfengCoreChecks`。当前包含 30 项检查，覆盖路径边界、符号链接、扫描后变化、扫描上限、应用占用，以及自建临时文件的废纸篓行为。检查程序不依赖 XCTest。
+执行 `bash scripts/test.sh` 运行独立的 `QingfengCoreChecks`。当前包含 37 项检查，覆盖路径边界、符号链接、扫描后变化、扫描上限、应用占用、大文件批量清理，以及自建临时文件的废纸篓行为。检查程序不依赖 XCTest。
 
 欢迎提交 Bug 和范围明确的 Pull Request。请提供应用版本、macOS 版本、芯片、复现步骤和完整提示，隐藏私人路径与名称。修改清理逻辑时，请使用临时测试数据补充回归检查。
 

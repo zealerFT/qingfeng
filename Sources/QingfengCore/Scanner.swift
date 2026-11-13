@@ -151,8 +151,9 @@ public final class DiskScanner: @unchecked Sendable {
         var count = 0
         var seen = Set<String>()
         let excluded: Set<String> = ["node_modules", ".git", "Library", ".Trash", ".cache", "Pods"]
-        var stack = roots.filter { FileManager.default.fileExists(atPath: $0.path) }
-        while let url = stack.popLast() {
+        var stack = roots.map(\.standardizedFileURL).filter { FileManager.default.fileExists(atPath: $0.path) }
+        while let next = stack.popLast() {
+            let url = next.standardizedFileURL
             if flag.isCancelled { break }
             if count >= 500_000 {
                 issues.append(ScanIssue(path: url.path, message: "大文件扫描达到 50 万项上限；请选择更小的文件夹，无需修改磁盘权限。", kind: .limit)); break
@@ -169,10 +170,12 @@ public final class DiskScanner: @unchecked Sendable {
                     stack.append(contentsOf: try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil))
                 } else if SafetyPolicy.isRegular(s) && s.allocatedBytes >= minimum {
                     var m = Measurement(); m.bytes = s.allocatedBytes; m.files = 1
-                    m.newest = Date(timeIntervalSince1970: Double(s.modified))
+                    m.newest = Date(timeIntervalSince1970: Double(s.modified) + Double(s.modifiedNanos) / 1e9)
+                    m.entries[url.path] = s
+                    let eligible = policy.allows(url, category: .large)
                     report.items.append(ScanItem(path: url.path, title: url.lastPathComponent, category: .large,
-                                                note: "个人文件；在 Finder 中确认用途后自行管理", measurement: m,
-                                                eligible: false, suggested: false))
+                                                note: eligible ? "个人文件；确认不再需要后，可勾选移入废纸篓" : "受保护位置或用户目录外的文件；仅供查看",
+                                                measurement: m, eligible: eligible, suggested: false))
                     if report.items.count > 400 { report.items.sort { $0.bytes > $1.bytes }; report.items = Array(report.items.prefix(200)) }
                 }
                 if count % 3000 == 0 { progress("查找大文件 · \(count.formatted()) 项") }

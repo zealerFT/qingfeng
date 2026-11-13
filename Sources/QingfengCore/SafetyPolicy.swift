@@ -76,7 +76,21 @@ public struct SafetyPolicy: Sendable {
                   ["dmg", "pkg", "xip"].contains(target.pathExtension.lowercased()),
                   let s = try? Self.stamp(target), Self.isRegular(s) else { return false }
             return now.timeIntervalSince1970 - Double(s.modified) >= 30 * 86400
-        case .large, .protected: return false
+        case .large:
+            guard let stamp = try? Self.stamp(target), Self.isRegular(stamp),
+                  let values = try? target.resourceValues(forKeys: [.isUbiquitousItemKey]),
+                  values.isUbiquitousItem != true, !target.lastPathComponent.hasSuffix(".icloud") else { return false }
+            // A chosen subfolder must not bypass the same exclusions as the large-file scan.
+            let excluded: Set<String> = ["Library", "Applications", "node_modules", "Pods"]
+            var cursor = target.standardizedFileURL
+            while cursor.path != home.path {
+                guard !cursor.lastPathComponent.hasPrefix("."), !excluded.contains(cursor.lastPathComponent),
+                      let values = try? cursor.resourceValues(forKeys: [.isPackageKey]),
+                      values.isPackage != true else { return false }
+                cursor.deleteLastPathComponent()
+            }
+            return true
+        case .protected: return false
         }
     }
 }

@@ -150,14 +150,18 @@ final class CleanerTests {
         expectEqual(journal.first?.destination, destination.path)
         expectTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("a").path))
     }
-    func testLargeFileDiscoveryNeverCleanableOrFollowsLinks() throws {
+    func testLargeFileDiscoveryCapturesSnapshotWithoutFollowingLinks() throws {
         try file("Downloads/large.bin")
         let secret = try file("Documents/hidden.bin")
         try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("Downloads/alias.bin"), withDestinationURL: secret)
         let report = DiskScanner(home: root).largeFiles(roots: [root.appendingPathComponent("Downloads")], minimum: 1)
         expectEqual(report.items.count, 1)
         expectEqual(report.items.first?.title, "large.bin")
-        expectFalse(try require(report.items.first).eligible)
+        let candidate = try require(report.items.first)
+        expectTrue(candidate.eligible)
+        expectFalse(candidate.suggested)
+        expectEqual(candidate.measurement.entries.count, 1)
+        expectNoThrow(try Cleaner(home: root).validate(candidate))
     }
     func testScanDoesNotMutateFilesOrDoubleCountDeveloperCaches() throws {
         let url = try file("Library/Caches/go-build/a")

@@ -17,11 +17,11 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.0.2 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.0.2)
+**[Download Qingfeng 1.1.0 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.1.0)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
-Qingfeng is a native, offline disk cleanup app for Apple Silicon Macs. It helps you review application caches, developer caches, old logs, and installers, then moves the items you confirm to the macOS Trash. Large files and important data remain available for inspection.
+Qingfeng is a native, offline disk cleanup app for Apple Silicon Macs. It helps you review application caches, developer caches, old logs, installers, and large personal files, then moves the items you confirm to the macOS Trash. Important data remains available for inspection.
 
 The app is built with **SwiftUI and AppKit**, with no third-party dependencies. Its current interface is **Simplified Chinese**; this repository provides documentation in English and Chinese.
 
@@ -29,6 +29,7 @@ The app is built with **SwiftUI and AppKit**, with no third-party dependencies. 
 
 - **Understand storage use.** Review disk capacity and cleanup candidates by category, with search and Finder shortcuts.
 - **Keep control of cleanup.** Nothing is selected by default. Each cleanup requires confirmation and a fresh check of file metadata.
+- **Remove large files in batches.** Select individual files or all eligible search results, review their paths and total size, and move them to Trash together.
 - **Manage developer caches.** Find known caches from npm, pip, uv, Homebrew, Go, Xcode, JetBrains IDEs, and browser testing tools.
 - **Inspect important data.** Models, container storage, device backups, Xcode archives, and IDE local history are view-only.
 - **Adjust scan limits.** Set a per-directory limit from 10,000 to 1,000,000 entries, including `400000`.
@@ -51,11 +52,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.0.2/Qingfeng-1.0.2-AppleSilicon.zip)** (`Qingfeng-1.0.2-AppleSilicon.zip`).
-2. Double-click the ZIP to extract it, then drag **清风.app** into **Applications**.
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)** (`Qingfeng-1.1.0-AppleSilicon.zip`).
+2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.0.2-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.1.0-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -88,6 +89,10 @@ Use `bash scripts/build.sh` when you only need build artifacts for packaging or 
 
 **勾选较旧项目** (Select Older Items) selects eligible items in the current list that have not changed for at least seven days and are not blocked by a detected running app. Review those selections yourself; age alone does not make a file unnecessary.
 
+### Batch large-file cleanup
+
+In **大文件** (Large Files), use the checkboxes or **全选当前结果** (Select All Current Results), then click **批量移入废纸篓** (Move Selection to Trash). Review the listed paths and confirm that you no longer need the files. Changing pages clears the selection. Large personal files are excluded from the overview's cache-cleanup estimate. Files outside your home directory and protected locations remain view-only.
+
 ### Scan settings
 
 Open the gear button at the top right, enter a value such as `400000` or `400,000`, and click **保存并重新扫描** (Save & Rescan).
@@ -109,7 +114,7 @@ The setting is saved locally and survives restarts. Saving clears the previous s
 | JetBrains caches | Per-version `caches`, `index`, `compile-server`, and `tmp` directories | Preserves LocalHistory and other IDE data. Running-app checks match the IDE product and version when available. |
 | Old logs | Items under `~/Library/Logs` | The entire item must have no updates in the last 30 days. |
 | Old installers | Top-level `.dmg`, `.pkg`, and `.xip` files in `~/Downloads` | At least 30 days old; ZIP archives and nested installers are excluded. |
-| Large files | Downloads, Desktop, Documents, Movies, or a folder you choose | Files with at least 200 MB of allocated space; shows up to the 200 largest results. Finder inspection only. |
+| Large files | Downloads, Desktop, Documents, Movies, or a folder you choose | At least 200 MB of allocated space; up to the 200 largest results. Ordinary files within your home directory can be selected and moved to Trash after confirmation. Protected locations, app packages, hidden paths, and files outside your home remain view-only. |
 | Important data | Known model directories, Docker/Podman storage, device backups, Xcode archives, JetBrains LocalHistory, and the pnpm shared store | Size inspection only; cleanup is disabled. |
 
 Qingfeng does not provide app uninstallation, permanent deletion, container pruning, or cleanup of system directories, photo libraries, chat histories, source repositories, Keychain, or Time Machine backups. Symbolic links and special files prevent a candidate from being cleaned.
@@ -145,7 +150,7 @@ scripts/                 Test, build, and icon generation scripts
 docs/                    Screenshots and publishing instructions
 ```
 
-Run `bash scripts/test.sh` for the standalone `QingfengCoreChecks` executable. It currently contains 30 checks, including path boundaries, symbolic links, changes after scanning, scan limits, app detection, and Trash behavior with synthetic files. The check runner does not depend on XCTest.
+Run `bash scripts/test.sh` for the standalone `QingfengCoreChecks` executable. It currently contains 37 checks, including path boundaries, symbolic links, changes after scanning, scan limits, app detection, batch large-file cleanup, and Trash behavior with synthetic files. The check runner does not depend on XCTest.
 
 Bug reports and focused pull requests are welcome. Include the app version, macOS version, chip, reproduction steps, and the exact message. Redact private paths and names. Changes to cleanup behavior should include regression checks using temporary fixtures.
 

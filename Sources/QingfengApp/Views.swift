@@ -52,7 +52,7 @@ struct RootView: View {
                         Image(systemName: page.symbol).font(.system(size: 16)).frame(width: 20)
                         Text(page.rawValue).font(.system(size: 13, weight: model.page == page ? .semibold : .regular))
                         Spacer()
-                        if page == .clean && !model.selected.isEmpty {
+                        if page == model.page && (page == .clean || page == .large) && !model.selected.isEmpty {
                             Text("\(model.selected.count)").font(.system(size: 10, weight: .semibold)).padding(4).background(.white, in: Capsule())
                         }
                     }.padding(.horizontal, 15).padding(.vertical, 13)
@@ -226,7 +226,14 @@ struct RootView: View {
                 if model.page == .clean {
                     Button("勾选较旧项目") { model.selectOlder() }.buttonStyle(QuietButton()).disabled(model.busy || model.report == nil)
                         .help("勾选至少 7 天未更新且相关应用未运行的可清理项；请逐项复核")
-                    Button("取消勾选") { model.selected.removeAll() }.buttonStyle(.plain).font(.system(size: 11)).disabled(model.busy)
+                } else if model.page == .large {
+                    Button("全选当前结果") { model.selectAllVisible() }.buttonStyle(QuietButton())
+                        .disabled(model.busy || !model.visibleItems.contains(where: \.eligible))
+                        .help("仅勾选当前搜索结果中可移入废纸篓的文件")
+                }
+                if model.page == .clean || model.page == .large {
+                    Button("取消勾选") { model.selected.removeAll() }.buttonStyle(.plain).font(.system(size: 11))
+                        .disabled(model.busy || model.selected.isEmpty)
                 }
             }
             if model.visibleItems.isEmpty {
@@ -251,7 +258,7 @@ struct RootView: View {
 
     private var listSubtitle: String {
         switch model.page {
-        case .large: return "展示最大的 200 个本地文件（≥ 200 MB）；默认扫描下载、桌面、文稿和影片。"
+        case .large: return "展示最大的 200 个本地文件（≥ 200 MB）；勾选不再需要的文件，确认后批量移入废纸篓。"
         case .protected: return "这些内容可能承载重要资产，只统计占用，交由对应应用管理。"
         default: return "缓存会重新生成；先退出相关应用和构建任务，再勾选需要整理的项目。"
         }
@@ -267,12 +274,17 @@ struct RootView: View {
 
     private func itemRow(_ item: ScanItem) -> some View {
         HStack(spacing: 13) {
-            if model.page == .clean {
-                Button { model.toggle(item) } label: {
-                    Image(systemName: !item.eligible ? "lock" : model.selected.contains(item.id) ? "checkmark.square.fill" : "square")
-                        .font(.system(size: 17)).foregroundStyle(item.eligible ? Theme.accent : Theme.muted.opacity(0.5))
-                }.buttonStyle(.plain).disabled(!item.eligible || model.busy).frame(width: 21)
-                    .accessibilityLabel("选择 \(item.title)").accessibilityValue(model.selected.contains(item.id) ? "已选择" : "未选择")
+            if model.page == .clean || model.page == .large {
+                if item.eligible {
+                    Toggle("选择 \(item.title)", isOn: Binding(
+                        get: { model.selected.contains(item.id) },
+                        set: { if $0 != model.selected.contains(item.id) { model.toggle(item) } }
+                    )).toggleStyle(.checkbox).labelsHidden().disabled(model.busy).frame(width: 21)
+                        .accessibilityLabel("选择 \(item.title)")
+                } else {
+                    Image(systemName: "lock").font(.system(size: 17)).foregroundStyle(Theme.muted.opacity(0.5))
+                        .frame(width: 21).accessibilityLabel("仅供查看：\(item.title)")
+                }
             } else {
                 Image(systemName: item.category.symbol).font(.system(size: 18)).foregroundStyle(Theme.accent).frame(width: 23)
             }
@@ -309,9 +321,11 @@ struct RootView: View {
                         .font(.system(size: 10)).foregroundStyle(Theme.muted)
                 }
                 Spacer()
-                if model.page == .clean {
-                    Button { model.prepareCleanup() } label: { Label("复核并清理", systemImage: "trash") }
-                        .buttonStyle(PrimaryButton()).disabled(model.selected.isEmpty || model.busy).opacity(model.selected.isEmpty || model.busy ? 0.45 : 1)
+                if model.page == .clean || model.page == .large {
+                    Button { model.prepareCleanup() } label: {
+                        Label(model.page == .large ? "批量移入废纸篓" : "复核并清理", systemImage: "trash")
+                    }.buttonStyle(PrimaryButton()).disabled(model.selectedItems.isEmpty || model.busy)
+                        .opacity(model.selectedItems.isEmpty || model.busy ? 0.45 : 1)
                 } else {
                     Button { model.openTrash() } label: { Label("打开废纸篓", systemImage: "trash") }.buttonStyle(QuietButton())
                 }
@@ -361,7 +375,9 @@ struct RootView: View {
             Label("确认这次整理", systemImage: "trash").font(.system(size: 23, weight: .semibold))
             Text("将 \(model.selected.count) 项（约 \(displayBytes(model.selectedBytes))）移入废纸篓。")
                 .font(.system(size: 14, weight: .medium))
-            Text("缓存可能需要重新下载或重建。应用会先复核文件；仍在使用、内容变化或无权限的项目会跳过。")
+            Text(model.page == .large
+                 ? "所选内容是个人文件，请确认不再需要，并关闭正在使用这些文件的应用。移动前会复核文件；内容变化或无权限的项目会跳过。"
+                 : "缓存可能需要重新下载或重建。应用会先复核文件；仍在使用、内容变化或无权限的项目会跳过。")
                 .font(.system(size: 12)).foregroundStyle(Theme.muted).lineSpacing(5)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -373,7 +389,8 @@ struct RootView: View {
                     }
                 }.padding(16)
             }.frame(height: 220).background(Theme.background, in: RoundedRectangle(cornerRadius: 12))
-            Toggle("我已检查所选项目，并退出相关应用和构建任务", isOn: $model.acknowledged).font(.system(size: 12))
+            Toggle(model.page == .large ? "我已确认这些文件不再需要，并关闭正在使用它们的应用" : "我已检查所选项目，并退出相关应用和构建任务",
+                   isOn: $model.acknowledged).font(.system(size: 12))
             Text("移入废纸篓不会立即释放磁盘空间。请确认不再需要后，在 Finder 中清空废纸篓。")
                 .font(.system(size: 11)).foregroundStyle(Theme.amber).lineSpacing(4)
             HStack {

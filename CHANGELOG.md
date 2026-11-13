@@ -11,6 +11,19 @@ Notable changes to Qingfeng are documented here. Version numbers match the app's
 - Exclude generated assets, local scan reports, and private development notes from version control.
 - Redact machine-specific screenshot content and remove embedded image metadata before public distribution.
 
+## [1.1.0] - 2026-11-13
+
+### Added
+
+- Checkboxes, selection totals, select-all-current-results, and batch moves to Trash in the Large Files list.
+- File metadata snapshots and revalidation before moving selected large files, with per-file results in cleanup history.
+
+### Changed
+
+- Clear selections when changing pages and keep personal files out of cache-cleanup estimates.
+- Retain view-only protection for app packages, hidden paths, protected locations, and files outside the user's home directory.
+- Provide a local install script that replaces `/Applications/清风.app` and removes duplicate build and user Applications copies.
+
 ## [1.0.2] - 2026-10-26
 
 ### Added

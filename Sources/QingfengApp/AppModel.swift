@@ -44,7 +44,9 @@ final class HistoryStore: @unchecked Sendable {
 }
 
 @MainActor final class AppModel: ObservableObject {
-    @Published var page: Page = .overview
+    @Published var page: Page = .overview {
+        didSet { if page != oldValue { selected.removeAll() } }
+    }
     @Published var report: ScanReport?
     @Published var selected = Set<String>()
     @Published var busy = false
@@ -75,8 +77,8 @@ final class HistoryStore: @unchecked Sendable {
     }
 
     var items: [ScanItem] { report?.items ?? [] }
-    var cleanable: [ScanItem] { items.filter(\.eligible) }
-    var selectedItems: [ScanItem] { cleanable.filter { selected.contains($0.id) } }
+    var cleanable: [ScanItem] { items.filter { $0.eligible && $0.category != .large } }
+    var selectedItems: [ScanItem] { items.filter { selected.contains($0.id) && canSelect($0) } }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
     var cleanableBytes: Int64 { cleanable.reduce(0) { $0 + $1.bytes } }
     var usedFraction: Double { total > 0 ? min(1, max(0, Double(total - available) / Double(total))) : 0 }
@@ -129,11 +131,20 @@ final class HistoryStore: @unchecked Sendable {
         refreshDisk()
     }
     func cancel() { cancellation.cancel(); cancelling = true; status = "正在安全停止…" }
+    private func canSelect(_ item: ScanItem) -> Bool {
+        item.eligible && ((page == .large && item.category == .large)
+            || (page == .clean && [.cache, .developer, .logs, .installers].contains(item.category)))
+    }
     func toggle(_ item: ScanItem) {
-        guard item.eligible, !busy else { return }
+        guard canSelect(item), !busy else { return }
         if selected.contains(item.id) { selected.remove(item.id) } else { selected.insert(item.id) }
     }
+    func selectAllVisible() {
+        guard page == .large, !busy else { return }
+        selected.formUnion(visibleItems.filter { canSelect($0) }.map(\.id))
+    }
     func selectOlder() {
+        guard page == .clean, !busy else { return }
         let running = Self.runningApplications()
         selected = Set(visibleItems.filter {
             $0.eligible && $0.suggested && ApplicationUsage.blockingReason(for: $0.path, applications: running) == nil
@@ -174,7 +185,10 @@ final class HistoryStore: @unchecked Sendable {
         status = "扫描上限已设置为 \(value.formatted()) 项，正在重新扫描…"
         scan()
     }
-    func prepareCleanup() { acknowledged = false; showConfirmation = true }
+    func prepareCleanup() {
+        guard !busy, !selectedItems.isEmpty else { return }
+        acknowledged = false; showConfirmation = true
+    }
 
     nonisolated static func runningApplications() -> [RunningApplicationInfo] {
         let read: () -> [RunningApplicationInfo] = {

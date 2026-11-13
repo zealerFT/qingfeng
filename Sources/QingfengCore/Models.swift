@@ -138,7 +138,7 @@ public struct ScanReport: Codable, Sendable {
     public var date = Date()
     public var cancelled = false
     public init() {}
-    public var cleanableBytes: Int64 { items.filter(\.eligible).reduce(0) { $0 + $1.bytes } }
+    public var cleanableBytes: Int64 { items.filter { $0.eligible && $0.category != .large }.reduce(0) { $0 + $1.bytes } }
     public var hasPermissionIssues: Bool { issues.contains { $0.category == .permission } }
     public var issueSummary: String {
         let parts = ScanIssue.Kind.allCases.compactMap { kind -> String? in
