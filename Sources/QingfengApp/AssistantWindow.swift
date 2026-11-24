@@ -7,6 +7,30 @@ private final class AssistantPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+enum AssistantWindowPlacement {
+    static func visibleOrigin(_ point: NSPoint, size: NSSize, screens: [NSRect]) -> NSPoint {
+        let rect = NSRect(origin: point, size: size)
+        // Prefer the destination display, not the first display touched by the icon.
+        let center = NSPoint(x: rect.midX, y: rect.midY)
+        let screen = screens.first { $0.contains(center) } ?? screens.min {
+            func distance(_ frame: NSRect) -> CGFloat {
+                let dx = max(frame.minX - center.x, 0, center.x - frame.maxX)
+                let dy = max(frame.minY - center.y, 0, center.y - frame.maxY)
+                return dx * dx + dy * dy
+            }
+            return distance($0) < distance($1)
+        }
+        guard let frame = screen else { return point }
+        return NSPoint(x: max(frame.minX + 8, min(point.x, frame.maxX - size.width - 8)),
+                       y: max(frame.minY + 8, min(point.y, frame.maxY - size.height - 8)))
+    }
+}
+
+final class AssistantHostingView<Content: View>: NSHostingView<Content> {
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 @MainActor final class AssistantWindowController: NSObject, NSWindowDelegate {
     private let model: AssistantModel
     private var bubble: NSPanel?
@@ -20,23 +44,24 @@ private final class AssistantPanel: NSPanel {
             if enabled { self?.showIconIfEnabled() } else { self?.bubble?.orderOut(nil) }
         }.store(in: &observers)
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification).sink { [weak self] _ in
-            guard let self, let bubble = self.bubble else { return }
-            bubble.setFrameOrigin(self.visibleOrigin(bubble.frame.origin, size: bubble.frame.size))
+            guard let self else { return }
+            for panel in [self.bubble, self.conversation].compactMap({ $0 }) {
+                panel.setFrameOrigin(self.visibleOrigin(panel.frame.origin, size: panel.frame.size))
+            }
         }.store(in: &observers)
     }
     private func setup(_ panel: NSPanel) {
         panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        // All Spaces alone does not opt a panel into other apps' Stage Manager sets/full-screen spaces.
+        panel.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
+        panel.isFloatingPanel = true
+        panel.isMovableByWindowBackground = false
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true
         panel.title = "清风 AI"; panel.delegate = self
     }
     private func visibleOrigin(_ point: NSPoint, size: NSSize) -> NSPoint {
-        let rect = NSRect(origin: point, size: size)
-        let screen = NSScreen.screens.first { $0.visibleFrame.intersects(rect) } ?? NSScreen.main ?? NSScreen.screens.first
-        guard let frame = screen?.visibleFrame else { return point }
-        return NSPoint(x: max(frame.minX + 8, min(point.x, frame.maxX - size.width - 8)),
-                       y: max(frame.minY + 8, min(point.y, frame.maxY - size.height - 8)))
+        AssistantWindowPlacement.visibleOrigin(point, size: size, screens: NSScreen.screens.map(\.visibleFrame))
     }
     private func makeBubble() -> NSPanel {
         let size = NSSize(width: 64, height: 64)
@@ -48,9 +73,11 @@ private final class AssistantPanel: NSPanel {
         let button = FloatingAssistantButton(frame: NSRect(origin: .zero, size: size))
         button.open = { [weak self] in self?.showConversation() }
         button.hide = { [weak self] in self?.model.floatingIconEnabled = false }
-        button.move = { [weak self, weak panel] point in
+        button.didDrag = { [weak self, weak panel] in
             guard let self, let panel else { return }
-            panel.setFrameOrigin(self.visibleOrigin(point, size: size))
+            // Clamp only after the native drag ends, allowing free movement across windows/displays.
+            panel.setFrameOrigin(self.visibleOrigin(panel.frame.origin, size: size))
+            UserDefaults.standard.set(NSStringFromPoint(panel.frame.origin), forKey: self.positionKey)
         }
         panel.contentView = button
         return panel
@@ -67,8 +94,7 @@ private final class AssistantPanel: NSPanel {
             let panel = AssistantPanel(contentRect: NSRect(origin: origin, size: size),
                                        styleMask: [.borderless, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
             setup(panel); panel.minSize = NSSize(width: 420, height: 480)
-            panel.isMovableByWindowBackground = true
-            panel.contentView = NSHostingView(rootView: AssistantView(model: model, collapse: { [weak self] in self?.collapse() }))
+            panel.contentView = AssistantHostingView(rootView: AssistantView(model: model, collapse: { [weak self] in self?.collapse() }))
             conversation = panel
         }
         if let bubble, let conversation, bubble.isVisible {
@@ -90,13 +116,15 @@ private final class AssistantPanel: NSPanel {
     }
 }
 
-private final class FloatingAssistantButton: NSView {
+final class FloatingAssistantButton: NSView {
     var open: (() -> Void)?
     var hide: (() -> Void)?
-    var move: ((NSPoint) -> Void)?
+    var didDrag: (() -> Void)?
     private var mouseStart = NSPoint.zero
-    private var windowStart = NSPoint.zero
+    private var mouseDownEvent: NSEvent?
     private var dragged = false
+    private var dragCompletionPending = false
+    private var dragEndTimer: Timer?
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         toolTip = "清风 AI · 点击咨询，拖动调整位置"
@@ -119,16 +147,40 @@ private final class FloatingAssistantButton: NSView {
         }
     }
     override var acceptsFirstResponder: Bool { true }
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func mouseDown(with event: NSEvent) {
-        mouseStart = NSEvent.mouseLocation; windowStart = window?.frame.origin ?? .zero; dragged = false
+        finishDrag()
+        mouseDownEvent = event
+        mouseStart = event.locationInWindow; dragged = false
     }
     override func mouseDragged(with event: NSEvent) {
-        let current = NSEvent.mouseLocation
+        guard !dragged, let window, let mouseDownEvent else { return }
+        let current = event.locationInWindow
         let dx = current.x - mouseStart.x, dy = current.y - mouseStart.y
-        if abs(dx) + abs(dy) > 4 { dragged = true }
-        if dragged { move?(NSPoint(x: windowStart.x + dx, y: windowStart.y + dy)) }
+        guard hypot(dx, dy) > 4 else { return }
+        dragged = true
+        dragCompletionPending = true
+        // AppKit requires the original mouse-down event, returns immediately, and may consume mouse-up.
+        window.performDrag(with: mouseDownEvent)
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] timer in
+            guard let self else { timer.invalidate(); return }
+            if NSEvent.pressedMouseButtons & 1 == 0 { self.finishDrag() }
+        }
+        dragEndTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
-    override func mouseUp(with event: NSEvent) { if !dragged { open?() } }
+    private func finishDrag() {
+        dragEndTimer?.invalidate(); dragEndTimer = nil
+        guard dragCompletionPending else { return }
+        dragCompletionPending = false
+        didDrag?()
+    }
+    override func mouseUp(with event: NSEvent) {
+        mouseDownEvent = nil
+        if dragged { finishDrag() } else { open?() }
+    }
+    deinit { dragEndTimer?.invalidate() }
     override func accessibilityPerformPress() -> Bool { open?(); return true }
     @objc private func showChat() { open?() }
     @objc private func hideBubble() { hide?() }

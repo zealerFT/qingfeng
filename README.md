@@ -17,7 +17,7 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.2.2 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.2)
+**[Download Qingfeng 1.2.3 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.3)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
@@ -54,11 +54,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)** (`Qingfeng-1.2.2-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)** (`Qingfeng-1.2.3-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.2-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.3-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -111,7 +111,7 @@ Select eligible files with checkboxes or **全选当前结果** (Select All Curr
 
 ### AI assistant
 
-1. Open **AI 助手** or click the floating sparkle icon. The icon can be dragged around the desktop, including while another app is active; it is available while Qingfeng is running.
+1. Open **AI 助手** or click the floating sparkle icon. Drag the icon across the desktop and displays; the assistant can join other apps' full-screen spaces and Stage Manager groups while Qingfeng is running. Drag the conversation's title area to move it, and click **−** to collapse it. Toolbar buttons accept the first click even while Qingfeng is inactive.
 2. In the assistant's settings, choose a preset or protocol, enter the API base URL, model ID, and API key. Local services without authentication can leave the key empty. **测试连接** (Test Connection) sends a short request to that service.
 3. Right-click an item in Cleanup Items, Large Files, or Important Data, then select **发送给 AI 分析** (Send to AI). Analysis starts immediately; no extra Enter is required. On first use, **保存并分析** (Save & Analyze) continues the pending request after configuration.
 4. Ask follow-up questions, stop a response, retry a failed request, or start a new conversation. The minus button collapses the panel back to its icon; settings can hide the icon.
@@ -190,7 +190,7 @@ scripts/                 Test, build, and icon generation scripts
 docs/                    Screenshots and publishing instructions
 ```
 
-Run `bash scripts/test.sh` for **58 core checks and 8 loopback HTTP transport checks**. They cover cleanup safety, disk accounting, file discovery, sparse files, limits, AI file context, shared model references, incomplete indexes, four AI protocols, streaming boundaries, authentication errors, redirect refusal, and cancellation. Tests use temporary files and a local Python 3 fixture server; no real API keys or external model calls are needed. The runners do not depend on XCTest.
+Run `bash scripts/test.sh` for **58 core checks, 8 loopback HTTP transport checks, and 4 AppKit window checks**. They cover cleanup safety, disk accounting, file discovery, sparse files, limits, AI file context, shared model references, incomplete indexes, four AI protocols, streaming boundaries, authentication errors, redirect refusal, cancellation, screen placement, and toolbar hit testing. Tests use temporary files, offscreen views, and a local Python 3 fixture server; no real API keys or external model calls are needed. Run `bash scripts/test-assistant-window.sh` for just the window checks. The runners do not depend on XCTest.
 
 Bug reports and focused pull requests are welcome. Include the app version, macOS version, chip, reproduction steps, and the exact message. Redact private paths and names. Changes to cleanup behavior should include regression checks using temporary fixtures.
 

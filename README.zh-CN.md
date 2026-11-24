@@ -17,7 +17,7 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-**[直接下载清风 1.2.2（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.2)
+**[直接下载清风 1.2.3（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.3)
 
 支持 macOS 14 及以上 · 下载即可安装 · 无需 Xcode 或自行编译
 
@@ -54,11 +54,11 @@
 
 ### 安装包
 
-1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)**：`Qingfeng-1.2.2-AppleSilicon.zip`。
+1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)**：`Qingfeng-1.2.3-AppleSilicon.zip`。
 2. 退出清风，双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」；已有旧版本时选择「**替换**」。
 3. 在「应用程序」中打开「**清风**」，无需安装开发工具或编译源码。
 
-[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.2-AppleSilicon.zip**。
+[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.3-AppleSilicon.zip**。
 
 当前安装包使用 **ad-hoc 本地签名**，**尚未经过 Apple 公证**。如果 macOS 阻止打开你从本仓库下载并信任的应用，可先尝试打开一次，再到「系统设置 → 隐私与安全性」查看是否提供「仍要打开」。也可以自行构建源码。
 
@@ -111,7 +111,7 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 
 ### AI 助手
 
-1. 点击「**AI 助手**」或桌面星光悬浮图标。图标可任意拖动，在其他应用前也能使用；清风退出后浮窗随之关闭。
+1. 点击「**AI 助手**」或桌面星光悬浮图标。图标可跨桌面和显示器拖动，支持其他应用的全屏空间与台前调度分组。拖动对话框左侧标题区可移动窗口，点击「**−**」收起；清风不在前台时，标题栏按钮也接收第一次点击。清风退出后浮窗随之关闭。
 2. 在助手设置中选择预设或接口协议，填写 API 服务地址、模型 ID 和密钥。本机无鉴权服务可不填密钥。「**测试连接**」会向所选服务发送一条短请求。
 3. 在清理项目、大文件或重要数据中右键，选择「**发送给 AI 分析**」，立即开始，无需再回车。首次使用时，「**保存并分析**」会在完成配置后继续这条请求。
 4. 可追问、停止回答、重试失败请求或开始新对话。减号收起为图标，设置中可隐藏图标。
@@ -190,7 +190,7 @@ scripts/                 测试、构建与图标生成脚本
 docs/                    截图与发布说明
 ```
 
-执行 `bash scripts/test.sh`，运行 **58 项核心检查和 8 项本机 HTTP 通信检查**。覆盖清理安全、容量口径、文件发现、稀疏文件、扫描限制、AI 文件上下文、共享模型引用、不完整索引、四种 AI 协议、流式边界、鉴权错误、拒绝重定向和取消。使用临时文件及本机 Python 3 模拟服务，不需要真实 API Key 或外部模型。检查程序不依赖 XCTest。
+执行 `bash scripts/test.sh`，运行 **58 项核心检查、8 项本机 HTTP 通信检查和 4 项 AppKit 窗口检查**。覆盖清理安全、容量口径、文件发现、稀疏文件、扫描限制、AI 文件上下文、共享模型引用、不完整索引、四种 AI 协议、流式边界、鉴权错误、拒绝重定向、取消、屏幕定位及按钮命中。使用临时文件、离屏视图及本机 Python 3 模拟服务，不需要真实 API Key 或外部模型。执行 `bash scripts/test-assistant-window.sh` 可单独验证窗口交互。检查程序不依赖 XCTest。
 
 欢迎提交 Bug 和范围明确的 Pull Request。请提供应用版本、macOS 版本、芯片、复现步骤和完整提示，隐藏私人路径与名称。修改清理逻辑时，请使用临时测试数据补充回归检查。
 

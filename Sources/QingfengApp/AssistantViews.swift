@@ -6,18 +6,9 @@ struct AssistantView: View {
     var collapse: () -> Void
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Image(systemName: "sparkles").foregroundStyle(Theme.accent)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("清风 AI").font(.system(size: 15, weight: .semibold))
-                    Text(model.serviceLabel).font(.system(size: 10)).foregroundStyle(Theme.muted).lineLimit(1)
-                }
-                Spacer()
-                Button { model.showSettings.toggle() } label: { Image(systemName: "gearshape") }
-                    .help("AI 模型设置").disabled(model.busy)
-                Button { model.clear() } label: { Image(systemName: "square.and.pencil") }.help("新对话")
-                Button(action: collapse) { Image(systemName: "minus") }.help("收起为悬浮图标")
-            }.buttonStyle(.plain).padding(18).background(Theme.sidebar)
+            AssistantTitleBar(subtitle: model.serviceLabel, busy: model.busy,
+                              settings: { model.showSettings.toggle() }, newChat: { model.clear() }, collapse: collapse)
+                .frame(height: 72).background(Theme.sidebar)
             if model.showSettings {
                 AISettingsView(model: model)
             } else {
