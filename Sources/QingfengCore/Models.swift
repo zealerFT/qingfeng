@@ -70,12 +70,16 @@ public struct ScanItem: Identifiable, Codable, Sendable {
     public let measurement: Measurement
     public let eligible: Bool
     public let suggested: Bool
+    public let logicalBytes: Int64?
+    public let lastAccessed: Date?
     public var bytes: Int64 { measurement.bytes }
     public var url: URL { URL(fileURLWithPath: path) }
     public init(path: String, title: String, category: ScanCategory, note: String,
-                measurement: Measurement, eligible: Bool, suggested: Bool) {
+                measurement: Measurement, eligible: Bool, suggested: Bool,
+                logicalBytes: Int64? = nil, lastAccessed: Date? = nil) {
         self.path = path; self.title = title; self.category = category; self.note = note
         self.measurement = measurement; self.eligible = eligible; self.suggested = suggested
+        self.logicalBytes = logicalBytes; self.lastAccessed = lastAccessed
     }
 }
 
@@ -137,6 +141,7 @@ public struct ScanReport: Codable, Sendable {
     public var issues: [ScanIssue] = []
     public var date = Date()
     public var cancelled = false
+    public var largeFileSummary: LargeFileSummary?
     public init() {}
     public var cleanableBytes: Int64 { items.filter { $0.eligible && $0.category != .large }.reduce(0) { $0 + $1.bytes } }
     public var hasPermissionIssues: Bool { issues.contains { $0.category == .permission } }

@@ -7,7 +7,8 @@ let package = Package(
     targets: [
         .target(name: "QingfengCore"),
         .executableTarget(name: "QingfengApp", dependencies: ["QingfengCore"]),
-        .executableTarget(name: "QingfengCoreChecks", dependencies: ["QingfengCore"], path: "Tests/QingfengCoreTests")
+        .executableTarget(name: "QingfengCoreChecks", dependencies: ["QingfengCore"], path: "Tests/QingfengCoreTests"),
+        .executableTarget(name: "QingfengAITransportChecks", dependencies: ["QingfengCore"], path: "Tests/QingfengAITransportChecks")
     ],
     swiftLanguageModes: [.v5]
 )

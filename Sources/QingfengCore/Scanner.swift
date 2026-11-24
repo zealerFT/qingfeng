@@ -7,13 +7,18 @@ public final class DiskScanner: @unchecked Sendable {
     private let progress: @Sendable (String) -> Void
     private var issues: [ScanIssue] = []
     public let directoryLimit: Int
+    public let largeMinimum: Int64
+    public let inventoryLimit: Int
     public var scanIssues: [ScanIssue] { issues }
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser,
                 cancellation: CancellationFlag = CancellationFlag(),
                 directoryLimit: Int = ScanLimit.defaultDirectory,
+                largeMinimum: Int64 = 50_000_000, inventoryLimit: Int = 2_000_000,
                 progress: @escaping @Sendable (String) -> Void = { _ in }) {
         policy = SafetyPolicy(home: home); flag = cancellation
         self.directoryLimit = ScanLimit.normalizedDirectory(directoryLimit)
+        self.largeMinimum = max(1, largeMinimum)
+        self.inventoryLimit = max(1, inventoryLimit)
         self.progress = progress
     }
 
@@ -136,9 +141,9 @@ public final class DiskScanner: @unchecked Sendable {
             append(policy.url(path), title: name, category: .protected, note: note)
         }
         if !flag.isCancelled {
-            let covered = report.items.filter { $0.category == .installers }.map(\.path)
-            let big = largeFiles(roots: ["Downloads", "Desktop", "Documents", "Movies"].map(policy.url))
-            report.items.append(contentsOf: big.items.filter { !covered.contains($0.path) })
+            let big = largeFiles(roots: defaultLargeRoots)
+            report.items.append(contentsOf: big.items)
+            report.largeFileSummary = big.largeFileSummary
         }
         report.items.sort { $0.bytes > $1.bytes }
         report.issues = issues
@@ -146,46 +151,127 @@ public final class DiskScanner: @unchecked Sendable {
         return report
     }
 
-    public func largeFiles(roots: [URL], minimum: Int64 = 200_000_000) -> ScanReport {
+    public var defaultLargeRoots: [URL] {
+        // Test scanners with an isolated home never enumerate the real Applications directory.
+        policy.home.path == fm.homeDirectoryForCurrentUser.resolvingSymlinksInPath().path
+            ? [policy.home, URL(fileURLWithPath: "/Applications")] : [policy.home]
+    }
+
+    public func largeFiles(roots: [URL], minimum: Int64? = nil, entryLimit: Int? = nil,
+                           resultLimit: Int = 20_000) -> ScanReport {
         var report = ScanReport()
-        var count = 0
-        var seen = Set<String>()
-        let excluded: Set<String> = ["node_modules", ".git", "Library", ".Trash", ".cache", "Pods"]
-        var stack = roots.map(\.standardizedFileURL).filter { FileManager.default.fileExists(atPath: $0.path) }
-        while let next = stack.popLast() {
-            let url = next.standardizedFileURL
-            if flag.isCancelled { break }
-            if count >= 500_000 {
-                issues.append(ScanIssue(path: url.path, message: "大文件扫描达到 50 万项上限；请选择更小的文件夹，无需修改磁盘权限。", kind: .limit)); break
+        let issueStart = issues.count
+        let threshold = max(1, minimum ?? largeMinimum)
+        let limit = max(1, entryLimit ?? inventoryLimit)
+        let maxResults = max(1, resultLimit)
+        let candidates = Array(Set(roots.map { $0.standardizedFileURL.path })).sorted { $0.count < $1.count }
+        var paths: [String] = []
+        for path in candidates where !paths.contains(where: { SafetyPolicy.isWithin(path, $0) }) { paths.append(path) }
+        var summary = LargeFileSummary(roots: paths, minimumBytes: threshold)
+        let keys: Set<URLResourceKey> = [.isPackageKey, .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey, .contentAccessDateKey]
+
+        func add(_ url: URL, stamp: FileStamp, values: URLResourceValues, package: Bool) {
+            var measurement: Measurement
+            if package {
+                measurement = measure(url, retainEntries: false, limit: directoryLimit)
+                if !measurement.complete { summary.unreadableEntries += 1 }
+            } else {
+                measurement = Measurement(); measurement.bytes = stamp.allocatedBytes; measurement.files = 1
+                measurement.newest = Date(timeIntervalSince1970: Double(stamp.modified) + Double(stamp.modifiedNanos) / 1e9)
+                measurement.entries[url.path] = stamp
             }
-            count += 1
-            guard seen.insert(url.standardizedFileURL.path).inserted else { continue }
-            do {
-                let s = try SafetyPolicy.stamp(url)
-                if SafetyPolicy.isLink(s) { continue }
-                let values = try url.resourceValues(forKeys: [.isPackageKey, .isUbiquitousItemKey])
-                if values.isUbiquitousItem == true || url.lastPathComponent.hasSuffix(".icloud") { continue }
-                if SafetyPolicy.isDirectory(s) {
-                    if excluded.contains(url.lastPathComponent) || values.isPackage == true || url.lastPathComponent.hasPrefix(".") { continue }
-                    stack.append(contentsOf: try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil))
-                } else if SafetyPolicy.isRegular(s) && s.allocatedBytes >= minimum {
-                    var m = Measurement(); m.bytes = s.allocatedBytes; m.files = 1
-                    m.newest = Date(timeIntervalSince1970: Double(s.modified) + Double(s.modifiedNanos) / 1e9)
-                    m.entries[url.path] = s
-                    let eligible = policy.allows(url, category: .large)
-                    report.items.append(ScanItem(path: url.path, title: url.lastPathComponent, category: .large,
-                                                note: eligible ? "个人文件；确认不再需要后，可勾选移入废纸篓" : "受保护位置或用户目录外的文件；仅供查看",
-                                                measurement: m, eligible: eligible, suggested: false))
-                    if report.items.count > 400 { report.items.sort { $0.bytes > $1.bytes }; report.items = Array(report.items.prefix(200)) }
-                }
-                if count % 3000 == 0 { progress("查找大文件 · \(count.formatted()) 项") }
-            } catch {
-                if issues.count < 200 { issues.append(ScanIssue(path: url.path, error: error)) }
+            let logical = package ? measurement.bytes : stamp.size
+            guard max(logical, measurement.bytes) >= threshold else { return }
+            summary.matchedFiles += 1
+            let eligible = !package && policy.allows(url, category: .large)
+            report.items.append(ScanItem(path: url.path, title: url.lastPathComponent, category: .large,
+                note: eligible ? "个人文件；确认不再需要后，可勾选移入废纸篓" : "仅供查看与 AI 分析；应用、模型目录和受保护位置请通过所属应用管理",
+                measurement: measurement, eligible: eligible, suggested: false,
+                logicalBytes: logical, lastAccessed: values.contentAccessDate))
+            if report.items.count > maxResults * 2 {
+                report.items.sort { $0.fileSize > $1.fileSize }
+                report.items = Array(report.items.prefix(maxResults))
             }
         }
-        report.items.sort { $0.bytes > $1.bytes }
-        report.items = Array(report.items.prefix(200))
-        report.issues = issues; report.cancelled = flag.isCancelled
+
+        for path in paths {
+            if flag.isCancelled || summary.reachedEntryLimit { break }
+            if summary.visitedEntries >= limit { summary.reachedEntryLimit = true; break }
+            let root = URL(fileURLWithPath: path)
+            do {
+                let rootStamp = try SafetyPolicy.stamp(root)
+                guard !SafetyPolicy.isLink(rootStamp) else { continue }
+                let rootValues = try root.resourceValues(forKeys: keys)
+                if SafetyPolicy.isRegular(rootStamp) || rootValues.isPackage == true {
+                    summary.visitedEntries += 1
+                    if !root.lastPathComponent.hasSuffix(".icloud") && (rootValues.isUbiquitousItem != true || rootValues.ubiquitousItemDownloadingStatus == .current
+                        || rootValues.ubiquitousItemDownloadingStatus == .downloaded) {
+                        add(root, stamp: rootStamp, values: rootValues, package: rootValues.isPackage == true)
+                    } else { summary.skippedCloudFiles += 1 }
+                    continue
+                }
+                guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: [], options: [], errorHandler: { url, error in
+                    summary.unreadableEntries += 1
+                    if self.issues.count < 200 { self.issues.append(ScanIssue(path: url.path, error: error)) }
+                    return !self.flag.isCancelled
+                }) else { continue }
+                while let rawURL = autoreleasepool(invoking: { enumerator.nextObject() as? URL }) {
+                    let url = rawURL.standardizedFileURL
+                    if flag.isCancelled { break }
+                    if summary.visitedEntries >= limit { summary.reachedEntryLimit = true; break }
+                    summary.visitedEntries += 1
+                    // Foundation URLs/resource values are released per entry, keeping a home-wide scan bounded.
+                    autoreleasepool {
+                        do {
+                            let stamp = try SafetyPolicy.stamp(url)
+                            if SafetyPolicy.isLink(stamp) || stamp.device != rootStamp.device { enumerator.skipDescendants(); return }
+                            if url.lastPathComponent.hasSuffix(".icloud") {
+                                summary.skippedCloudFiles += 1; enumerator.skipDescendants(); return
+                            }
+                            let directory = SafetyPolicy.isDirectory(stamp)
+                            let package = try directory && rawURL.resourceValues(forKeys: [.isPackageKey]).isPackage == true
+                            // Most home entries are small source/dependency files. Only candidates need
+                            // cloud status and access dates; ordinary directories need only package status.
+                            guard package || (SafetyPolicy.isRegular(stamp) && max(stamp.size, stamp.allocatedBytes) >= threshold) else { return }
+                            let values = try rawURL.resourceValues(forKeys: keys)
+                            if values.isUbiquitousItem == true && values.ubiquitousItemDownloadingStatus != .current
+                                && values.ubiquitousItemDownloadingStatus != .downloaded {
+                                summary.skippedCloudFiles += 1; enumerator.skipDescendants(); return
+                            }
+                            if package {
+                                enumerator.skipDescendants()
+                                add(url, stamp: stamp, values: values, package: true)
+                            } else {
+                                add(url, stamp: stamp, values: values, package: false)
+                            }
+                        } catch {
+                            summary.unreadableEntries += 1
+                            if issues.count < 200 { issues.append(ScanIssue(path: url.path, error: error)) }
+                        }
+                    }
+                    if summary.visitedEntries % 5_000 == 0 {
+                        progress("查找大文件 · 已检查 \(summary.visitedEntries.formatted()) 项 · 找到 \(summary.matchedFiles.formatted()) 个")
+                    }
+                }
+            } catch {
+                summary.unreadableEntries += 1
+                if issues.count < 200 { issues.append(ScanIssue(path: path, error: error)) }
+            }
+        }
+        report.items.sort { $0.fileSize > $1.fileSize }
+        summary.reachedResultLimit = summary.matchedFiles > maxResults
+        report.items = Array(report.items.prefix(maxResults))
+        if summary.reachedEntryLimit {
+            issues.append(ScanIssue(path: paths.first ?? "", message: "大文件扫描达到 \(limit.formatted()) 项上限；结果不完整。可在设置提高大文件扫描上限，或选择文件夹单独扫描。", kind: .limit))
+        }
+        if summary.reachedResultLimit {
+            issues.append(ScanIssue(path: paths.first ?? "", message: "找到 \(summary.matchedFiles.formatted()) 项，当前保留最大的 \(maxResults.formatted()) 项；请选择更小的文件夹进一步查看。", kind: .limit))
+        }
+        summary.cancelled = flag.isCancelled
+        report.issues = Array(issues.dropFirst(issueStart))
+        summary.issueIDs = report.issues.map(\.id)
+        report.largeFileSummary = summary
+        report.cancelled = flag.isCancelled
         return report
     }
 }

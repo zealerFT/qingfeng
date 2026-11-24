@@ -17,13 +17,13 @@ Repository: [zealerFT/qingfeng](https://github.com/zealerFT/qingfeng). This guid
 **Description** — copy this into GitHub's Description field:
 
 ```text
-A native, offline disk cleaner for Apple Silicon Macs, built with SwiftUI. Review caches and large files, then move selected items to Trash.
+A native disk cleaner for Apple Silicon Macs. Review caches and large files, understand storage use, and ask your own AI model before cleanup.
 ```
 
 Suggested topics:
 
 ```text
-macos apple-silicon swift swiftui disk-cleaner disk-space cache-cleaner developer-tools offline
+macos apple-silicon swift swiftui disk-cleaner disk-space cache-cleaner developer-tools ai-assistant ollama
 ```
 
 ## Publish the source
@@ -69,37 +69,22 @@ codesign --verify --deep --strict --verbose=2 dist/清风.app
 
 For a local user installation, run `bash scripts/install.sh` instead. It replaces `/Applications/清风.app`, moves the previous user Applications copy and temporary build bundle to Trash, and refreshes Launch Services. Keep `scripts/build.sh` for packaging or CI where installing into the host Applications folder is not desired.
 
-For version 1.0.2, create a GitHub Release with:
+## Versioned releases
 
-- **Tag:** `v1.0.2`, targeting the reviewed `main` commit.
-- **Title:** `Qingfeng 1.0.2`.
-- **Asset:** `dist/Qingfeng-1.0.2-AppleSilicon.zip`.
+For each release:
 
-Use these release notes as a starting point:
+1. Update `CFBundleShortVersionString` and `CFBundleVersion` in `Resources/Info.plist`.
+2. Update both README download links, the changelog, and `docs/releases/v<version>.md`.
+3. Run `bash scripts/test.sh` (Swift toolchain and Python 3 required), build, verify arm64 and the signature, and review the public file set.
+4. Commit and push `main`, then separately push an annotated `v<version>` tag. Use a public Git identity, such as the owner's no-reply address above.
+5. The **Publish macOS app** workflow checks the tag/version, runs core and loopback HTTP checks, and creates a GitHub Release containing `Qingfeng-<version>-AppleSilicon.zip` and `SHA256SUMS.txt`.
+6. Verify both assets on the release page before sharing the link. Source-code archives are not app installers.
 
-```markdown
-Qingfeng is a native, offline disk cleanup app for Apple Silicon Macs.
+Current release: **1.2.0**, tag **v1.2.0**, build **6**. Release notes: [v1.2.0.md](releases/v1.2.0.md).
 
-### Highlights
+Packages are ad-hoc signed, not Apple notarized. Describe this in the README and release notes. Update instructions must tell users to quit and replace `/Applications/清风.app`, not retain a second app copy.
 
-- Review application caches, developer caches, old logs, and installers before moving selected items to Trash.
-- Inspect large files and important data without deleting them in the app.
-- Configure the per-directory scan limit from 10,000 to 1,000,000 entries, with settings saved locally.
-- Distinguish access denials, changed files, and scan limits, with more precise running-app detection.
-
-### Requirements and installation
-
-- Apple Silicon Mac, macOS 14 or later; the app interface is Simplified Chinese.
-- Download `Qingfeng-1.0.2-AppleSilicon.zip`, extract it, and move `清风.app` to Applications.
-- This build is ad-hoc signed and is not notarized by Apple. See the README for first-launch guidance or source build instructions.
-- Files are moved to Trash only after confirmation. Empty Trash yourself when ready to reclaim space.
-
-### 中文说明
-
-原生 Apple Silicon 磁盘整理工具，支持应用与开发缓存、旧日志、旧安装包，以及大文件和重要数据的只读查看。单目录扫描上限可设置为 10,000–1,000,000 项并保存在本机。
-
-需要 macOS 14 及以上，应用为中文界面。安装包为本地 ad-hoc 签名，尚未经过 Apple 公证。清理需要确认，文件进入系统废纸篓；检查后自行清空才会释放空间。
-```
+Scanning and cleanup operate offline, but optional AI sends user questions, conversation context, and selected file metadata to the configured endpoint. Do not describe the entire application as network-free. Never include real keys, personal file inventories, local reports, or identifiable screenshots in a release.
 
 ## Repository contents
 

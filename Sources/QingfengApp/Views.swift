@@ -29,6 +29,10 @@ struct RootView: View {
             Button("知道了") { model.notice = nil }
         } message: { Text(model.notice ?? "") }
         .onChange(of: model.page) { _, _ in model.search = "" }
+        .onAppear { model.showAssistantIcon() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            if !model.isPreview { model.refreshDisk() }
+        }
     }
 
     private var sidebar: some View {
@@ -63,7 +67,7 @@ struct RootView: View {
             Spacer()
             VStack(alignment: .leading, spacing: 10) {
                 Label("本机处理，安心整理", systemImage: "lock.shield").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.accent)
-                Text("扫描结果留在这台 Mac\n每一次清理，由你决定")
+                Text("扫描结果留在这台 Mac\nAI 咨询由你主动发起")
                     .font(.system(size: 11)).lineSpacing(5).foregroundStyle(Theme.muted)
             }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 12)).padding(16)
             HStack(spacing: 6) {
@@ -80,7 +84,9 @@ struct RootView: View {
             Text("此 Mac").fontWeight(.medium)
             Spacer()
             Circle().fill(Theme.accent).frame(width: 5, height: 5)
-            Text("离线运行").foregroundStyle(Theme.muted)
+            Text("本地扫描").foregroundStyle(Theme.muted)
+            Button { model.openAssistant() } label: { Label("AI 助手", systemImage: "sparkles") }
+                .buttonStyle(.plain).foregroundStyle(Theme.accent).padding(.leading, 12)
             Button { model.openSettings() } label: { Image(systemName: "gearshape") }
                 .buttonStyle(.plain).help("扫描设置").disabled(model.busy).padding(.leading, 12)
             Button { model.exportReport() } label: { Image(systemName: "square.and.arrow.up") }
@@ -142,7 +148,7 @@ struct RootView: View {
                     Circle().trim(from: 0, to: cleanupFraction)
                         .stroke(Theme.accent, lineWidth: 17).rotationEffect(.degrees(-90))
                     VStack(spacing: 7) {
-                        Text("可用空间").font(.system(size: 11)).foregroundStyle(Theme.muted)
+                        Text(model.includesReclaimable ? "系统可用空间" : "物理空闲空间").font(.system(size: 11)).foregroundStyle(Theme.muted)
                         Text(space.hasCapacity ? displayBytes(space.available) : "—").font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
                         Text(space.hasCapacity ? "共 \(displayBytes(space.total))" : "暂未读取到磁盘容量").font(.system(size: 10)).foregroundStyle(Theme.muted)
                     }.padding(20)
@@ -158,7 +164,7 @@ struct RootView: View {
                     storageLegend("待确认清理项目", bytes: space.cleanup, color: Theme.accent,
                                   placeholder: model.hasCleanupScan ? "—" : "等待扫描")
                     storageLegend(model.hasCleanupScan ? "其他已用空间" : "已用空间 · 待分类", bytes: space.otherUsed, color: Theme.otherStorage)
-                    storageLegend("可用空间", bytes: space.available, color: Theme.pale)
+                    storageLegend(model.includesReclaimable ? "可用（含系统可回收）" : "可用（物理空闲）", bytes: space.available, color: Theme.pale)
                     if model.hasCleanupScan {
                         Button { model.page = .clean; model.filter = nil } label: {
                             HStack(spacing: 6) { Text("查看 \(model.cleanable.count) 项清理项目"); Image(systemName: "arrow.right") }
@@ -167,13 +173,19 @@ struct RootView: View {
                 }.frame(maxWidth: .infinity)
             }
             VStack(alignment: .leading, spacing: 6) {
+                if space.hasCapacity {
+                    Text(model.includesReclaimable
+                         ? "物理空闲 \(displayBytes(space.free))  +  系统可回收 \(displayBytes(space.reclaimable))  =  可用 \(displayBytes(space.available))"
+                         : "当前仅能读取物理空闲容量；系统可回收空间暂时无法获取。")
+                        .font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.accent)
+                }
                 Text(model.hasCleanupScan
                      ? "其他已用空间 = 已用空间 − 清理项目，包含系统、应用、个人文件、废纸篓、快照和未扫描内容；系统与应用未单独测量。"
                      : "扫描后会将已用空间分为清理项目和其他已用空间；系统、应用与个人文件等也会占用磁盘。")
                     .font(.system(size: 11)).lineSpacing(3)
                 Text(space.cleanupWasCapped
                      ? "清理估算超过当前已用空间，图表已按已用空间封顶；请重新扫描核对。"
-                     : "占比均以磁盘总容量计算，数值为估算；移入废纸篓后仍占空间。")
+                     : "可用容量采用 macOS 公共接口；系统可回收空间不等于清风清理项目。移入废纸篓后仍占空间。")
                     .font(.system(size: 10)).foregroundStyle(space.cleanupWasCapped ? Theme.amber : Theme.muted)
             }.foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
         }.padding(20).panel()
@@ -218,7 +230,7 @@ struct RootView: View {
             if model.busy {
                 Button(model.cancelling ? "正在停止…" : "停止") { model.cancel() }.buttonStyle(QuietButton()).disabled(model.cancelling)
             } else {
-                Button { model.scan() } label: { Label(model.report == nil ? "开始扫描" : "重新扫描", systemImage: "arrow.clockwise") }.buttonStyle(PrimaryButton())
+                Button { model.scan() } label: { Label(model.page == .large ? "扫描用户目录" : model.report == nil ? "开始扫描" : "重新扫描", systemImage: "arrow.clockwise") }.buttonStyle(PrimaryButton())
             }
         }
     }
@@ -243,6 +255,7 @@ struct RootView: View {
                     Spacer()
                 }
             }
+            if model.page == .large { inventoryControls }
             HStack {
                 HStack(spacing: 7) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Theme.muted)
@@ -285,10 +298,57 @@ struct RootView: View {
 
     private var listSubtitle: String {
         switch model.page {
-        case .large: return "展示最大的 200 个本地文件（≥ 200 MB）；勾选不再需要的文件，确认后批量移入废纸篓。"
+        case .large: return "用户目录（含隐藏目录与 Library）及应用目录；按类型查看，右键直接咨询 AI。"
         case .protected: return "这些内容可能承载重要资产，只统计占用，交由对应应用管理。"
         default: return "缓存会重新生成；先退出相关应用和构建任务，再勾选需要整理的项目。"
         }
+    }
+
+    private var inventoryControls: some View {
+        let inventory = model.items.filter { $0.category == .large }
+        let groups = Dictionary(grouping: inventory, by: \.fileKind)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("按文件类型").font(.system(size: 11, weight: .medium))
+                Spacer()
+                Text("门槛 ≥ \(model.largeMinimumMB) MB").font(.system(size: 10)).foregroundStyle(Theme.muted)
+                Button("调整") { model.openSettings() }.buttonStyle(.plain).font(.system(size: 10)).disabled(model.busy)
+                Picker("排序", selection: $model.largeSort) {
+                    ForEach(LargeFileSort.allCases) { Text($0.rawValue).tag($0) }
+                }.labelsHidden().frame(width: 115)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    fileKindButton(nil, count: inventory.count, bytes: inventory.reduce(0) { $0 + $1.fileSize })
+                    ForEach(FileKind.allCases) { kind in
+                        if let entries = groups[kind] {
+                            fileKindButton(kind, count: entries.count, bytes: entries.reduce(0) { $0 + $1.fileSize })
+                        }
+                    }
+                }
+            }
+            if let summary = model.report?.largeFileSummary {
+                Text("\(summary.complete ? "扫描完成" : "部分结果") · 已检查 \(summary.visitedEntries.formatted()) 项 · 找到 \(summary.matchedFiles.formatted()) 项 · 无法读取 \(summary.unreadableEntries.formatted()) 项 · 云端未下载 \(summary.skippedCloudFiles.formatted()) 项")
+                    .font(.system(size: 10)).foregroundStyle(summary.complete ? Theme.muted : Theme.amber)
+                Text("范围：\(summary.roots.map(shortPath).joined(separator: "、")) · 文件大小与磁盘占用分别显示；应用包按磁盘占用统计。")
+                    .font(.system(size: 10)).foregroundStyle(Theme.muted).lineLimit(2)
+                Text("类型合计仅覆盖本次结果，不代表系统完整分类，也不等于可释放空间。")
+                    .font(.system(size: 10)).foregroundStyle(Theme.muted)
+            } else {
+                Text("按文件大小或实际占用筛选；系统的“文稿”分类口径不同，不等同于此处按扩展名统计的类型。")
+                    .font(.system(size: 10)).foregroundStyle(Theme.muted)
+            }
+        }
+    }
+    private func fileKindButton(_ kind: FileKind?, count: Int, bytes: Int64) -> some View {
+        Button { model.fileKind = kind; model.selected.removeAll() } label: {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("\(kind?.title ?? "全部") · \(count)").font(.system(size: 11, weight: .medium))
+                Text(displayBytes(bytes)).font(.system(size: 10))
+            }.padding(.horizontal, 13).padding(.vertical, 9)
+                .foregroundStyle(model.fileKind == kind ? .white : Theme.muted)
+                .background(model.fileKind == kind ? Theme.accent : Theme.line.opacity(0.35), in: RoundedRectangle(cornerRadius: 9))
+        }.buttonStyle(.plain)
     }
 
     private func filterButton(_ category: ScanCategory?) -> some View {
@@ -317,17 +377,31 @@ struct RootView: View {
             }
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.title).font(.system(size: 12, weight: .semibold)).lineLimit(1).truncationMode(.middle)
+                    .textSelection(.enabled).contextMenu { itemActions(item) }
                 Text(shortPath(item.path)).font(.system(size: 10)).foregroundStyle(Theme.muted).lineLimit(1).truncationMode(.middle).help(item.path)
                 Text(item.note).font(.system(size: 10)).foregroundStyle(item.eligible ? Theme.muted : Theme.amber).lineLimit(2)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 5) {
-                Text((item.measurement.complete ? "" : "≥ ") + displayBytes(item.bytes)).font(.system(size: 13, weight: .semibold, design: .rounded)).monospacedDigit()
-                Text(item.measurement.files.formatted() + " 个文件").font(.system(size: 9)).foregroundStyle(Theme.muted)
+                Text((item.measurement.complete ? "" : "≥ ") + displayBytes(model.page == .large ? item.fileSize : item.bytes)).font(.system(size: 13, weight: .semibold, design: .rounded)).monospacedDigit()
+                if model.page == .large {
+                    Text("占用 \(displayBytes(item.bytes))").font(.system(size: 10)).foregroundStyle(Theme.muted)
+                    if let accessed = item.lastAccessed {
+                        Text("访问 " + accessed.formatted(date: .numeric, time: .omitted)).font(.system(size: 9)).foregroundStyle(Theme.muted)
+                    }
+                } else {
+                    Text(item.measurement.files.formatted() + " 个文件").font(.system(size: 9)).foregroundStyle(Theme.muted)
+                }
             }.frame(minWidth: 88)
             Button { model.reveal(item.url) } label: { Image(systemName: "folder").font(.system(size: 14)) }
                 .buttonStyle(.plain).foregroundStyle(Theme.muted).help("在 Finder 中显示").padding(.leading, 9)
-        }.padding(.horizontal, 17).padding(.vertical, 15)
+        }.padding(.horizontal, 17).padding(.vertical, 15).contentShape(Rectangle())
+            .contextMenu { itemActions(item) }
+    }
+
+    @ViewBuilder private func itemActions(_ item: ScanItem) -> some View {
+        Button { model.analyze(item) } label: { Label("发送给 AI 分析", systemImage: "sparkles") }
+        Button { model.reveal(item.url) } label: { Label("在 Finder 中显示", systemImage: "folder") }
     }
 
     private var footer: some View {
@@ -344,7 +418,7 @@ struct RootView: View {
                 if model.busy { ProgressView().controlSize(.small).scaleEffect(0.8) }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(model.status).font(.system(size: 11)).lineLimit(1).truncationMode(.middle)
-                    Text(model.selected.isEmpty ? "不自动删除 · 不上传文件 · 不清空废纸篓" : "已勾选 \(model.selected.count) 项 · \(displayBytes(model.selectedBytes))")
+                    Text(model.selected.isEmpty ? "不自动删除 · AI 按请求咨询 · 不清空废纸篓" : "已勾选 \(model.selected.count) 项 · \(displayBytes(model.selectedBytes))")
                         .font(.system(size: 10)).foregroundStyle(Theme.muted)
                 }
                 Spacer()
@@ -480,6 +554,20 @@ struct RootView: View {
                     Button(value.formatted()) { model.limitText = value.formatted() }.buttonStyle(QuietButton())
                 }
             }
+            VStack(alignment: .leading, spacing: 12) {
+                Text("大文件扫描").font(.system(size: 13, weight: .semibold))
+                HStack {
+                    Text("大小门槛")
+                    TextField("50", text: $model.minimumText).textFieldStyle(.roundedBorder).frame(width: 90)
+                    Text("MB")
+                    Spacer()
+                    Text("扫描上限")
+                    TextField("2000000", text: $model.inventoryLimitText).textFieldStyle(.roundedBorder).frame(width: 130)
+                    Text("项")
+                }.font(.system(size: 12))
+                Text("默认扫描整个用户目录及应用目录；门槛 1–10,000 MB，上限 10,000–10,000,000 项。最多保留 20,000 个结果，达到限制会明确提示。")
+                    .font(.system(size: 10)).foregroundStyle(Theme.muted).lineSpacing(3)
+            }.padding(17).background(Theme.background, in: RoundedRectangle(cornerRadius: 12))
             HStack(alignment: .top, spacing: 9) {
                 Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.amber)
                 Text("提高上限可能显著增加扫描时间和内存占用。它只改变扫描数量上限，不会授予完全磁盘访问权限，也不会放宽符号链接、系统目录、模型和容器等安全规则。")

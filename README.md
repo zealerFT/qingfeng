@@ -17,23 +17,25 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.1.1 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.1.1/Qingfeng-1.1.1-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.1.1)
+**[Download Qingfeng 1.2.0 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.0/Qingfeng-1.2.0-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.0)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
-Qingfeng is a native, offline disk cleanup app for Apple Silicon Macs. It helps you review application caches, developer caches, old logs, installers, and large personal files, then moves the items you confirm to the macOS Trash. Important data remains available for inspection.
+Qingfeng is a native disk cleanup app for Apple Silicon Macs. It helps you review application caches, developer caches, old logs, installers, and large personal files, then moves the items you confirm to the macOS Trash. Important data remains available for inspection. An optional AI assistant can explain selected files and cleanup risks using a model service you configure.
 
 The app is built with **SwiftUI and AppKit**, with no third-party dependencies. Its current interface is **Simplified Chinese**; this repository provides documentation in English and Chinese.
 
 ## Features
 
-- **Understand storage use.** See cleanup candidates, other used space, and available space as capacities and percentages of the whole disk, plus a breakdown of cleanup categories.
+- **Understand storage use.** See system-available capacity, physical free space, system-reclaimable space, cleanup candidates, and other used space.
 - **Keep control of cleanup.** Nothing is selected by default. Each cleanup requires confirmation and a fresh check of file metadata.
 - **Remove large files in batches.** Select individual files or all eligible search results, review their paths and total size, and move them to Trash together.
 - **Manage developer caches.** Find known caches from npm, pip, uv, Homebrew, Go, Xcode, JetBrains IDEs, and browser testing tools.
 - **Inspect important data.** Models, container storage, device backups, Xcode archives, and IDE local history are view-only.
-- **Adjust scan limits.** Set a per-directory limit from 10,000 to 1,000,000 entries, including `400000`.
-- **Work offline.** No account, analytics, server, or background service. Cleanup history stays on your Mac.
+- **Find more large files.** Scan your home, hidden directories, Library, and Applications; filter by file type and compare file size with allocated disk space.
+- **Adjust scan limits.** Configure directory and inventory limits independently, plus the minimum file size. Incomplete results are labeled.
+- **Ask AI about a file.** Right-click a file to analyze it immediately. A draggable desktop icon opens a streaming conversation with configurable cloud or local models.
+- **Scan locally.** Scanning and cleanup work offline. AI requests run only when you send a question, choose file analysis, or test your configured service. No telemetry or Qingfeng account.
 
 > Moving files to Trash does **not** immediately reclaim disk space. Review or restore them in Finder, then empty Trash yourself when ready. Qingfeng never empties it for you.
 
@@ -52,11 +54,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.1.1/Qingfeng-1.1.1-AppleSilicon.zip)** (`Qingfeng-1.1.1-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.0/Qingfeng-1.2.0-AppleSilicon.zip)** (`Qingfeng-1.2.0-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.1.1-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.0-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -91,25 +93,52 @@ Use `bash scripts/build.sh` when you only need build artifacts for packaging or 
 
 ### Reading the storage overview
 
-The ring accounts for the whole disk: **cleanup candidates + other used space + available space = total capacity**. The four cleanup cards show their share of the same total. Before a cleanup scan, used space is marked as awaiting classification.
+The overview uses macOS's public **available capacity for important usage** estimate: **physical free space + system-reclaimable space = available space**. Previously, Qingfeng displayed only physically free blocks, which can be much smaller than the capacity available in macOS Storage. If the expanded estimate is unavailable, Qingfeng falls back to physical free space and labels it accordingly.
 
-**Other used space** is the remainder after subtracting cleanup candidates from used space. It includes system files, installed apps, personal files, Trash, snapshots, and data outside the scan scope; system and app sizes are not measured separately. Large files and important data are already included in used space, so adding their lists again would double-count them. Figures are estimates, and percentages may differ slightly due to rounding.
+The ring accounts for the whole disk: **cleanup candidates + other used space + available space = total capacity**. The four cleanup cards use the same denominator. Before a cleanup scan, used space is marked as awaiting classification.
 
-### Batch large-file cleanup
+**Other used space** is the remainder after subtracting cleanup candidates from used space. It includes system files, installed apps, personal files, Trash, snapshots, and unscanned data. System and app sizes are not measured separately. System-reclaimable space is an OS estimate, not a promise that Qingfeng can delete that amount. Cache estimates may overlap reclaimable or shared storage and are not an exact forecast of additional free space.
 
-In **大文件** (Large Files), use the checkboxes or **全选当前结果** (Select All Current Results), then click **批量移入废纸篓** (Move Selection to Trash). Review the listed paths and confirm that you no longer need the files. Changing pages clears the selection. Large personal files are excluded from the overview's cache-cleanup estimate. Files outside your home directory and protected locations remain view-only.
+Qingfeng does not reproduce Apple's private Storage category index. Scan scope, permissions, snapshots, APFS sharing, and refresh timing can still produce differences. Large-file totals are a separate inventory and must not be added to the disk chart.
+
+### Large files and batch cleanup
+
+Open **大文件** (Large Files) and click **扫描用户目录** (Scan User Directory). The default scan covers the current user's entire home, including hidden locations and Library, plus `/Applications`. Use **选择文件夹** (Choose Folder) for another location or an external disk. Scanning does not follow symbolic links, cross mounted filesystem boundaries within a root, or download cloud-only files.
+
+Choose a type such as models, apps, videos, archives, or disk images to see its list. Sort by file size, allocated space, or last access. The scan summary shows scope, threshold, examined entries, unreadable entries, cloud placeholders, and any limits reached. Type totals describe the returned files, not complete system Storage categories. Last-access dates may be absent or approximate.
+
+Select eligible files with checkboxes or **全选当前结果** (Select All Current Results), then click **批量移入废纸篓** (Move Selection to Trash). Review paths and confirm. Protected files, packages, hidden paths, and files outside your home remain view-only but can be sent to AI. Changing pages or type filters clears the selection. Personal files are excluded from the overview's cache-cleanup estimate.
+
+### AI assistant
+
+1. Open **AI 助手** or click the floating sparkle icon. The icon can be dragged around the desktop, including while another app is active; it is available while Qingfeng is running.
+2. In the assistant's settings, choose a preset or protocol, enter the API base URL, model ID, and API key. Local services without authentication can leave the key empty. **测试连接** (Test Connection) sends a short request to that service.
+3. Right-click an item in Cleanup Items, Large Files, or Important Data, then select **发送给 AI 分析** (Send to AI). Analysis starts immediately; no extra Enter is required. On first use, **保存并分析** (Save & Analyze) continues the pending request after configuration.
+4. Ask follow-up questions, stop a response, retry a failed request, or start a new conversation. The minus button collapses the panel back to its icon; settings can hide the icon.
+
+| Protocol | Examples |
+| --- | --- |
+| OpenAI-compatible Chat Completions | OpenAI, DeepSeek, Qwen, SiliconFlow, Moonshot/Kimi, LM Studio, compatible gateways |
+| Anthropic Messages | Claude-compatible endpoints |
+| Gemini streaming GenerateContent | Google Gemini |
+| Ollama chat | Local Ollama |
+
+Model availability depends on your provider and account. Enter a model ID supported by the selected protocol. Remote endpoints require HTTPS; HTTP is allowed on loopback for local services. AI is optional and may incur provider fees.
+
+The analysis prompt asks the model to explain the likely purpose, distinguish facts from guesses, assess deletion consequences and recovery cost, and suggest checks. It supplies selected metadata and existing protection flags. **AI cannot delete files or run commands.** Review its advice before making your own cleanup decision.
 
 ### Scan settings
 
-Open the gear button at the top right, enter a value such as `400000` or `400,000`, and click **保存并重新扫描** (Save & Rescan).
+Open the gear button at the top right. Values such as `400000` and `400,000` are accepted for the directory limit. Click **保存并重新扫描** (Save & Rescan).
 
-| Setting | Value |
-| --- | --- |
-| Default per-directory limit | 300,000 entries |
-| Configurable range | 10,000–1,000,000 entries |
-| Large-file search limit | 500,000 entries, fixed separately |
+| Setting | Default | Range / behavior |
+| --- | --- | --- |
+| Per-directory measurement limit | 300,000 entries | 10,000–1,000,000; also applies to package measurement and cleanup revalidation |
+| Large-file inventory traversal limit | 2,000,000 entries | 10,000–10,000,000 |
+| Minimum large-file size | 50 MB | 1–10,000 MB; includes a file when logical or allocated size meets the threshold |
+| Retained large-file results | Largest 20,000 | A notice appears if more match; scan a smaller folder for detail |
 
-The setting is saved locally and survives restarts. Saving clears the previous scan results and starts a new scan; cleanup revalidation uses the same limit. Higher limits can increase scan time and memory use. A directory that exceeds its limit remains view-only until it is scanned completely.
+Settings persist locally. Saving clears old results and rescans the current scope. Higher limits can increase time and memory use. Incomplete directories remain view-only; read failures, cancellation, and truncation are reported explicitly. Packages are measured separately within the per-directory limit and shown as one view-only item.
 
 ## Cleanup scope
 
@@ -120,7 +149,7 @@ The setting is saved locally and survives restarts. Saving clears the previous s
 | JetBrains caches | Per-version `caches`, `index`, `compile-server`, and `tmp` directories | Preserves LocalHistory and other IDE data. Running-app checks match the IDE product and version when available. |
 | Old logs | Items under `~/Library/Logs` | The entire item must have no updates in the last 30 days. |
 | Old installers | Top-level `.dmg`, `.pkg`, and `.xip` files in `~/Downloads` | At least 30 days old; ZIP archives and nested installers are excluded. |
-| Large files | Downloads, Desktop, Documents, Movies, or a folder you choose | At least 200 MB of allocated space; up to the 200 largest results. Ordinary files within your home directory can be selected and moved to Trash after confirmation. Protected locations, app packages, hidden paths, and files outside your home remain view-only. |
+| Large files | Current user home (including hidden folders and Library), `/Applications`, or a selected folder | Default 50 MB threshold; type filters, logical/allocated sizes, and explicit scan coverage. Eligible ordinary files can be moved to Trash after confirmation. Protected locations and packages remain view-only. |
 | Important data | Known model directories, Docker/Podman storage, device backups, Xcode archives, JetBrains LocalHistory, and the pnpm shared store | Size inspection only; cleanup is disabled. |
 
 Qingfeng does not provide app uninstallation, permanent deletion, container pruning, or cleanup of system directories, photo libraries, chat histories, source repositories, Keychain, or Time Machine backups. Symbolic links and special files prevent a candidate from being cleaned.
@@ -129,34 +158,37 @@ Qingfeng does not provide app uninstallation, permanent deletion, container prun
 
 - **Access denied:** macOS can restrict individual folders. If needed, add Qingfeng under **System Settings → Privacy & Security → Full Disk Access**, then quit and reopen it. Ad-hoc signature changes after an update may require removing and re-adding the installed app.
 - **Files changed during scanning:** active apps can delete or replace cache files. Quit the corresponding app and rescan. This is distinct from an access denial.
-- **Scan limit reached:** increase the per-directory limit or choose a smaller folder for a large-file search. Granting more permissions does not change a scan limit.
+- **Scan limit reached:** increase the relevant directory or inventory limit, or choose a smaller folder. Granting more permissions does not change a scan limit.
 - **App still running:** quit the app identified in the message and rescan. Detection cannot cover every custom cache location or command-line build task.
-- **Storage estimates:** sizes reflect allocated disk blocks. APFS clones, snapshots, compression, and shared storage can make reclaimed space differ from the displayed total.
+- **Storage estimates:** cleanup estimates reflect allocated disk blocks; the inventory also shows logical file size. APFS clones, snapshots, compression, and shared storage can make reclaimed space differ from the displayed total.
 
 File metadata is checked again before cleanup. These checks reduce accidental changes but do not provide isolation against a malicious process racing to replace paths.
 
 ## Privacy
 
-Qingfeng has no network requests, analytics, or sign-in. Scan results stay in memory unless you export a report. Local cleanup history is stored at:
+Scanning and cleanup operate locally without network access, analytics, or sign-in. Scan results stay in memory unless you export a report. Local cleanup history is stored at:
 
 ```text
 ~/Library/Application Support/清风/history.json
 ```
 
-History is limited to 2,000 entries. Exported reports and history contain local paths; review them before sharing them in an issue.
+History is limited to 2,000 entries. Exported reports and history contain local paths; review them before sharing.
+
+AI is opt-in through your own service configuration. Sending a question or selected file analysis sends the conversation context and selected metadata (name, path, type, sizes, counts, dates, scan completeness, and protection notes) to that endpoint. The current home prefix is replaced with `~`; remaining path components can still be personal. **File contents and the full scan report are not uploaded.** Connection testing sends only a test question. API keys are stored in macOS Keychain, while nonsecret model settings are stored locally. Conversations are kept in memory, with up to 16 recent messages used for context. Your provider's retention policies apply to remote requests. You can use a local Ollama or LM Studio endpoint.
 
 ## Development
 
 ```text
 Sources/QingfengApp/      SwiftUI interface and AppKit integration
-Sources/QingfengCore/     Scanning, safety rules, app detection, and cleanup
-Tests/QingfengCoreTests/  Filesystem checks using temporary fixtures
+Sources/QingfengCore/     Scanning, safety rules, cleanup, and AI protocols
+Tests/QingfengCoreTests/  Core checks using temporary fixtures
+Tests/QingfengAITransportChecks/  Loopback streaming HTTP checks
 Resources/               App metadata and icon source
 scripts/                 Test, build, and icon generation scripts
 docs/                    Screenshots and publishing instructions
 ```
 
-Run `bash scripts/test.sh` for the standalone `QingfengCoreChecks` executable. It currently contains 41 checks, including disk-space accounting, path boundaries, symbolic links, changes after scanning, scan limits, app detection, batch large-file cleanup, and Trash behavior with synthetic files. The check runner does not depend on XCTest.
+Run `bash scripts/test.sh` for **52 core checks and 8 loopback HTTP transport checks**. They cover cleanup safety, disk accounting, broader file discovery, sparse files, limits, four AI protocols, streaming boundaries, authentication errors, redirect refusal, and cancellation. Tests use temporary files and a local Python 3 fixture server; no real API keys or external model calls are needed. The runners do not depend on XCTest.
 
 Bug reports and focused pull requests are welcome. Include the app version, macOS version, chip, reproduction steps, and the exact message. Redact private paths and names. Changes to cleanup behavior should include regression checks using temporary fixtures.
 
@@ -164,11 +196,19 @@ See the [changelog](CHANGELOG.md) and [publishing guide](docs/PUBLISHING.md). Th
 
 ## Screenshots
 
-The storage overview shows **v1.1.1** rendered with fictional example data. The cleanup screenshot is from **v1.0.0**, with private values, names, paths, counts, and scan times replaced by neutral placeholders. Neither image contains personal machine data. See the [changelog](CHANGELOG.md) for subsequent cleanup features.
+The overview, inventory, and AI images show **v1.2.0** rendered with fictional example data and a scripted example answer, not a real user scan or model response. The cleanup image is a redacted v1.0.0 capture. Embedded image metadata is removed. See [screenshot provenance](docs/screenshots/README.md).
 
 ### Storage overview
 
-![Qingfeng storage overview with disk capacity and cleanup categories](docs/screenshots/overview.png)
+![Qingfeng storage overview with physical free and system-reclaimable space](docs/screenshots/overview.png)
+
+### File types and larger scan scope
+
+![Qingfeng inventory with type filters and logical versus allocated file sizes](docs/screenshots/large-files.png)
+
+### AI file analysis
+
+<img src="docs/screenshots/assistant.png" alt="Qingfeng AI assistant showing a fictional file analysis" width="480">
 
 ### Review cleanup items
 

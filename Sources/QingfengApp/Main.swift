@@ -12,7 +12,8 @@ import QingfengCore
             report.items = report.items.map { item in
                 var measurement = item.measurement; measurement.entries.removeAll()
                 return ScanItem(path: item.path, title: item.title, category: item.category, note: item.note,
-                                measurement: measurement, eligible: item.eligible, suggested: item.suggested)
+                                measurement: measurement, eligible: item.eligible, suggested: item.suggested,
+                                logicalBytes: item.logicalBytes, lastAccessed: item.lastAccessed)
             }
             do {
                 let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

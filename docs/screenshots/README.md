@@ -1,12 +1,13 @@
 # Screenshots
 
-| File | View | Capture version |
+| File | View | Version / source |
 | --- | --- | --- |
-| [overview.png](overview.png) | Storage overview and cleanup categories | 1.0.0 |
-| [cleanup.png](cleanup.png) | Reviewable cleanup items with nothing selected | 1.0.0 |
+| [overview.png](overview.png) | Physical free, system-reclaimable, available capacity and cleanup categories | 1.2.0, fictional data |
+| [large-files.png](large-files.png) | Type filters, file size and allocated space | 1.2.0, fictional data |
+| [assistant.png](assistant.png) | File analysis conversation | 1.2.0, scripted example answer |
+| [assistant-settings.png](assistant-settings.png) | Provider and model settings | 1.2.0, fictional configuration; empty key |
+| [cleanup.png](cleanup.png) | Reviewable cleanup items with nothing selected | 1.0.0, redacted capture |
 
-These existing captures were rendered from the application's SwiftUI views and edited for public documentation. The layout shows the actual Chinese interface. Storage figures, the disk usage chart, volume and item names, paths, counts, and scan times are hidden or replaced with neutral placeholders. They do not expose a user's scan results or installed software inventory. Embedded image metadata has also been removed.
+The 1.2.0 images are offscreen renders of the actual SwiftUI views. File names, paths, sizes, counts, timestamps, and the AI answer are synthetic. They contain no real scan results, installed-software inventory, credentials, or provider response. The model ID is an example label, not a recommended model name.
 
-Version 1.0.1 refined scan notices and version 1.0.2 added the scan settings button. Those additions are described in the README and changelog but are not present in these captures.
-
-Before replacing these images, check for personal filenames, usernames, account details, and other private information. Keep filenames stable so both language versions of the README continue to render correctly.
+The older cleanup capture was edited to replace private content with neutral placeholders. Embedded PNG metadata has been removed from all public images. Keep image names stable so both READMEs render correctly; check replacements for personal information before committing.

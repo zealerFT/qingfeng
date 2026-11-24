@@ -11,6 +11,27 @@ Notable changes to Qingfeng are documented here. Version numbers match the app's
 - Exclude generated assets, local scan reports, and private development notes from version control.
 - Redact machine-specific screenshot content and remove embedded image metadata before public distribution.
 
+## [1.2.0] - 2026-11-24
+
+### Added
+
+- An optional AI assistant with a draggable desktop icon, streaming chat, stop/retry, and right-click file analysis that starts immediately.
+- OpenAI-compatible Chat Completions, Anthropic, Gemini, and Ollama protocols, provider presets, configurable endpoints/models, and API keys stored in macOS Keychain.
+- Cleanup-specific analysis using selected metadata and protection flags, with home-prefix redaction and no file-content upload or automatic cleanup.
+- Large-file type filters, logical/allocated size comparison, last-access sorting, configurable size threshold, and visible scan coverage.
+
+### Fixed
+
+- Use macOS available capacity for important usage instead of physical free space alone; show physical free and system-reclaimable capacity separately with a fallback when unavailable.
+- Scan the whole current user's home, including hidden locations and Library, plus Applications. Packages are view-only aggregates and cloud placeholders are not downloaded.
+- Replace the silent largest-200 cutoff with an explicit 20,000-result limit. Default minimum size is 50 MB and the inventory traversal limit is configurable independently (default 2,000,000).
+- Include sparse files by logical size and normalize enumerated paths before cleanup validation.
+- Preserve cleanup notices when refreshing only the large-file inventory.
+
+### Validation
+
+- 52 core checks and 8 local HTTP transport checks, covering all four streaming protocols, split UTF-8/SSE responses, errors, redirects, and cancellation without real provider credentials.
+
 ## [1.1.1] - 2026-11-24
 
 ### Fixed

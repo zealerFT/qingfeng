@@ -14,14 +14,17 @@ func expectFalse(_ value: @autoclosure () throws -> Bool, file: StaticString = #
     catch { fail("Unexpected error: \(error)", file: file, line: line) }
 }
 func expectEqual<T: Equatable>(_ a: @autoclosure () throws -> T, _ b: @autoclosure () throws -> T, file: StaticString = #filePath, line: UInt = #line) {
-    do { if try a() != b() { fail("Values differ", file: file, line: line) } }
+    do {
+        let actual = try a(), expected = try b()
+        if actual != expected { fail("Expected \(expected), got \(actual)", file: file, line: line) }
+    }
     catch { fail("Unexpected error: \(error)", file: file, line: line) }
 }
 func expectNoThrow(_ action: @autoclosure () throws -> Void, file: StaticString = #filePath, line: UInt = #line) {
     do { try action() } catch { fail("Unexpected error: \(error)", file: file, line: line) }
 }
-func expectThrows(_ action: @autoclosure () throws -> Void, file: StaticString = #filePath, line: UInt = #line) {
-    do { try action(); fail("Expected rejection", file: file, line: line) } catch {}
+func expectThrows<T>(_ action: @autoclosure () throws -> T, file: StaticString = #filePath, line: UInt = #line) {
+    do { _ = try action(); fail("Expected rejection", file: file, line: line) } catch {}
 }
 func require<T>(_ value: T?) throws -> T {
     guard let value else { throw NSError(domain: "CoreChecks", code: 1, userInfo: [NSLocalizedDescriptionKey: "Expected a value"]) }
@@ -72,7 +75,18 @@ func require<T>(_ value: T?) throws -> T {
             ("testDiskBreakdownAccountsForTheWholeVolume", suite.testDiskBreakdownAccountsForTheWholeVolume),
             ("testDiskBreakdownDistinguishesUnscannedFromEmpty", suite.testDiskBreakdownDistinguishesUnscannedFromEmpty),
             ("testDiskBreakdownHandlesUnknownCapacity", suite.testDiskBreakdownHandlesUnknownCapacity),
-            ("testDiskBreakdownBoundsStaleOrSharedStorageEstimates", suite.testDiskBreakdownBoundsStaleOrSharedStorageEstimates)
+            ("testDiskBreakdownBoundsStaleOrSharedStorageEstimates", suite.testDiskBreakdownBoundsStaleOrSharedStorageEstimates),
+            ("testCapacitySeparatesFreeAndSystemReclaimable", suite.testCapacitySeparatesFreeAndSystemReclaimable),
+            ("testHomeInventoryFindsHiddenModelsAndCustomFolders", suite.testHomeInventoryFindsHiddenModelsAndCustomFolders),
+            ("testInventoryNoLongerSilentlyDropsAfterTwoHundred", suite.testInventoryNoLongerSilentlyDropsAfterTwoHundred),
+            ("testInventoryReportsEntryLimitsAndCancellation", suite.testInventoryReportsEntryLimitsAndCancellation),
+            ("testInventoryDistinguishesSparseSizeAndAllocatedBlocks", suite.testInventoryDistinguishesSparseSizeAndAllocatedBlocks),
+            ("testInventoryPackagesCloudPlaceholdersAndOverlappingRoots", suite.testInventoryPackagesCloudPlaceholdersAndOverlappingRoots),
+            ("testAIRequestsMatchEachProviderProtocol", suite.testAIRequestsMatchEachProviderProtocol),
+            ("testAIRejectsInsecureOrCredentialBearingEndpoints", suite.testAIRejectsInsecureOrCredentialBearingEndpoints),
+            ("testAIStreamsDecodeTextAndIgnoreReasoningAndToolCalls", suite.testAIStreamsDecodeTextAndIgnoreReasoningAndToolCalls),
+            ("testAIStreamsRejectErrorsMalformedAndOversizedData", suite.testAIStreamsRejectErrorsMalformedAndOversizedData),
+            ("testAIFilePromptRedactsHomeAndPreservesProtectionAsData", suite.testAIFilePromptRedactsHomeAndPreservesProtectionAsData)
         ]
         var passed = 0
         for (name, test) in tests {
