@@ -77,6 +77,7 @@ func require<T>(_ value: T?) throws -> T {
             ("testDiskBreakdownHandlesUnknownCapacity", suite.testDiskBreakdownHandlesUnknownCapacity),
             ("testDiskBreakdownBoundsStaleOrSharedStorageEstimates", suite.testDiskBreakdownBoundsStaleOrSharedStorageEstimates),
             ("testCapacitySeparatesFreeAndSystemReclaimable", suite.testCapacitySeparatesFreeAndSystemReclaimable),
+            ("testInventoryPrioritizesModelsBeforeLargeSourceTrees", suite.testInventoryPrioritizesModelsBeforeLargeSourceTrees),
             ("testHomeInventoryFindsHiddenModelsAndCustomFolders", suite.testHomeInventoryFindsHiddenModelsAndCustomFolders),
             ("testInventoryNoLongerSilentlyDropsAfterTwoHundred", suite.testInventoryNoLongerSilentlyDropsAfterTwoHundred),
             ("testInventoryReportsEntryLimitsAndCancellation", suite.testInventoryReportsEntryLimitsAndCancellation),

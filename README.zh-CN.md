@@ -17,7 +17,7 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-**[直接下载清风 1.2.0（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.0/Qingfeng-1.2.0-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.0)
+**[直接下载清风 1.2.1（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.1)
 
 支持 macOS 14 及以上 · 下载即可安装 · 无需 Xcode 或自行编译
 
@@ -54,11 +54,11 @@
 
 ### 安装包
 
-1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.0/Qingfeng-1.2.0-AppleSilicon.zip)**：`Qingfeng-1.2.0-AppleSilicon.zip`。
+1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)**：`Qingfeng-1.2.1-AppleSilicon.zip`。
 2. 退出清风，双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」；已有旧版本时选择「**替换**」。
 3. 在「应用程序」中打开「**清风**」，无需安装开发工具或编译源码。
 
-[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.0-AppleSilicon.zip**。
+[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.1-AppleSilicon.zip**。
 
 当前安装包使用 **ad-hoc 本地签名**，**尚未经过 Apple 公证**。如果 macOS 阻止打开你从本仓库下载并信任的应用，可先尝试打开一次，再到「系统设置 → 隐私与安全性」查看是否提供「仍要打开」。也可以自行构建源码。
 
@@ -103,7 +103,7 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 
 ### 大文件与批量整理
 
-进入「**大文件**」，点击「**扫描用户目录**」。默认范围是当前用户整个主目录（含隐藏位置和 Library）以及 `/Applications`；「**选择文件夹**」可指定其他目录或外置磁盘。不跟随符号链接，不在单个根目录内跨越挂载边界，不下载仅存在云端的文件。
+进入「**大文件**」，点击「**扫描用户目录**」。默认范围是当前用户整个主目录（含隐藏位置和 Library）以及 `/Applications`；「**选择文件夹**」可指定其他目录或外置磁盘。已知模型位置和常用个人文件夹会优先于深层源码与依赖目录扫描。不跟随符号链接，不在单个根目录内跨越挂载边界，不下载仅存在云端的文件。
 
 点击模型、应用、视频、压缩包、磁盘镜像等类型，查看对应清单。可按文件大小、磁盘占用、最近访问排序。摘要展示范围、门槛、已检查数量、读取失败、云端未下载及扫描限制。分类合计只代表本次结果，不是系统完整分类占用；访问时间可能缺失或不精确。
 
@@ -188,7 +188,7 @@ scripts/                 测试、构建与图标生成脚本
 docs/                    截图与发布说明
 ```
 
-执行 `bash scripts/test.sh`，运行 **52 项核心检查和 8 项本机 HTTP 通信检查**。覆盖清理安全、容量口径、扩大文件发现范围、稀疏文件、扫描限制、四种 AI 协议、流式边界、鉴权错误、拒绝重定向和取消。使用临时文件及本机 Python 3 模拟服务，不需要真实 API Key 或外部模型。检查程序不依赖 XCTest。
+执行 `bash scripts/test.sh`，运行 **53 项核心检查和 8 项本机 HTTP 通信检查**。覆盖清理安全、容量口径、扩大文件发现范围、稀疏文件、扫描限制、四种 AI 协议、流式边界、鉴权错误、拒绝重定向和取消。使用临时文件及本机 Python 3 模拟服务，不需要真实 API Key 或外部模型。检查程序不依赖 XCTest。
 
 欢迎提交 Bug 和范围明确的 Pull Request。请提供应用版本、macOS 版本、芯片、复现步骤和完整提示，隐藏私人路径与名称。修改清理逻辑时，请使用临时测试数据补充回归检查。
 

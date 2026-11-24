@@ -2,6 +2,17 @@ import Foundation
 import QingfengCore
 
 extension CleanerTests {
+    func testInventoryPrioritizesModelsBeforeLargeSourceTrees() throws {
+        for index in 0..<30 { try file("Workspace/source-\(index).bin") }
+        let model = try file(".ollama/models/weights.gguf")
+        let limited = DiskScanner(home: root).largeFiles(roots: [root], minimum: 1, entryLimit: 1)
+        expectEqual(limited.items.map(\.path), [model.path])
+        expectEqual(limited.largeFileSummary?.reachedEntryLimit, true)
+        let complete = DiskScanner(home: root).largeFiles(roots: [root], minimum: 1)
+        expectEqual(complete.items.count, 31)
+        expectEqual(Set(complete.items.map(\.path)).count, 31)
+        expectEqual(complete.largeFileSummary?.roots, [root.path])
+    }
     func testCapacitySeparatesFreeAndSystemReclaimable() {
         let capacity = VolumeCapacity(total: 1_000, free: 50, importantUsage: 100)
         expectEqual(capacity.available, 100)

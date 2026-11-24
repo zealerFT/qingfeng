@@ -17,7 +17,7 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.2.0 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.0/Qingfeng-1.2.0-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.0)
+**[Download Qingfeng 1.2.1 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.1)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
@@ -54,11 +54,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.0/Qingfeng-1.2.0-AppleSilicon.zip)** (`Qingfeng-1.2.0-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)** (`Qingfeng-1.2.1-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.0-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.1-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -103,7 +103,7 @@ Qingfeng does not reproduce Apple's private Storage category index. Scan scope, 
 
 ### Large files and batch cleanup
 
-Open **大文件** (Large Files) and click **扫描用户目录** (Scan User Directory). The default scan covers the current user's entire home, including hidden locations and Library, plus `/Applications`. Use **选择文件夹** (Choose Folder) for another location or an external disk. Scanning does not follow symbolic links, cross mounted filesystem boundaries within a root, or download cloud-only files.
+Open **大文件** (Large Files) and click **扫描用户目录** (Scan User Directory). The default scan covers the current user's entire home, including hidden locations and Library, plus `/Applications`. Use **选择文件夹** (Choose Folder) for another location or an external disk. Known model locations and common personal folders are visited before deep source/dependency trees. Scanning does not follow symbolic links, cross mounted filesystem boundaries within a root, or download cloud-only files.
 
 Choose a type such as models, apps, videos, archives, or disk images to see its list. Sort by file size, allocated space, or last access. The scan summary shows scope, threshold, examined entries, unreadable entries, cloud placeholders, and any limits reached. Type totals describe the returned files, not complete system Storage categories. Last-access dates may be absent or approximate.
 
@@ -188,7 +188,7 @@ scripts/                 Test, build, and icon generation scripts
 docs/                    Screenshots and publishing instructions
 ```
 
-Run `bash scripts/test.sh` for **52 core checks and 8 loopback HTTP transport checks**. They cover cleanup safety, disk accounting, broader file discovery, sparse files, limits, four AI protocols, streaming boundaries, authentication errors, redirect refusal, and cancellation. Tests use temporary files and a local Python 3 fixture server; no real API keys or external model calls are needed. The runners do not depend on XCTest.
+Run `bash scripts/test.sh` for **53 core checks and 8 loopback HTTP transport checks**. They cover cleanup safety, disk accounting, broader file discovery, sparse files, limits, four AI protocols, streaming boundaries, authentication errors, redirect refusal, and cancellation. Tests use temporary files and a local Python 3 fixture server; no real API keys or external model calls are needed. The runners do not depend on XCTest.
 
 Bug reports and focused pull requests are welcome. Include the app version, macOS version, chip, reproduction steps, and the exact message. Redact private paths and names. Changes to cleanup behavior should include regression checks using temporary fixtures.
 

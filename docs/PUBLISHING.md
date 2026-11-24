@@ -80,7 +80,7 @@ For each release:
 5. The **Publish macOS app** workflow checks the tag/version, runs core and loopback HTTP checks, and creates a GitHub Release containing `Qingfeng-<version>-AppleSilicon.zip` and `SHA256SUMS.txt`.
 6. Verify both assets on the release page before sharing the link. Source-code archives are not app installers.
 
-Current release: **1.2.0**, tag **v1.2.0**, build **6**. Release notes: [v1.2.0.md](releases/v1.2.0.md).
+Current release: **1.2.1**, tag **v1.2.1**, build **7**. Release notes: [v1.2.1.md](releases/v1.2.1.md).
 
 Packages are ad-hoc signed, not Apple notarized. Describe this in the README and release notes. Update instructions must tell users to quit and replace `/Applications/清风.app`, not retain a second app copy.
 

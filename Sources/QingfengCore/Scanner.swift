@@ -169,6 +169,17 @@ public final class DiskScanner: @unchecked Sendable {
         for path in candidates where !paths.contains(where: { SafetyPolicy.isWithin(path, $0) }) { paths.append(path) }
         var summary = LargeFileSummary(roots: paths, minimumBytes: threshold)
         let keys: Set<URLResourceKey> = [.isPackageKey, .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey, .contentAccessDateKey]
+        // Visit the usual personal/model locations before potentially huge source trees.
+        // The remaining home is still scanned, excluding only roots already visited.
+        let priorityDirectories = [".ollama/models", ".lmstudio/models", ".cache/huggingface",
+                                   "Models", "Downloads", "Desktop", "Documents", "Movies", "Pictures", "Music"]
+        let traversalPaths = paths.flatMap { path -> [String] in
+            guard path == policy.home.path else { return [path] }
+            return priorityDirectories.map { policy.url($0).path }.filter {
+                fm.fileExists(atPath: $0) && policy.hasSafeAncestry(URL(fileURLWithPath: $0))
+            } + [path]
+        }
+        var visitedRoots = Set<String>()
 
         func add(_ url: URL, stamp: FileStamp, values: URLResourceValues, package: Bool) {
             var measurement: Measurement
@@ -194,9 +205,10 @@ public final class DiskScanner: @unchecked Sendable {
             }
         }
 
-        for path in paths {
+        for path in traversalPaths {
             if flag.isCancelled || summary.reachedEntryLimit { break }
             if summary.visitedEntries >= limit { summary.reachedEntryLimit = true; break }
+            defer { visitedRoots.insert(path) }
             let root = URL(fileURLWithPath: path)
             do {
                 let rootStamp = try SafetyPolicy.stamp(root)
@@ -218,6 +230,7 @@ public final class DiskScanner: @unchecked Sendable {
                 while let rawURL = autoreleasepool(invoking: { enumerator.nextObject() as? URL }) {
                     let url = rawURL.standardizedFileURL
                     if flag.isCancelled { break }
+                    if visitedRoots.contains(url.path) { enumerator.skipDescendants(); continue }
                     if summary.visitedEntries >= limit { summary.reachedEntryLimit = true; break }
                     summary.visitedEntries += 1
                     // Foundation URLs/resource values are released per entry, keeping a home-wide scan bounded.

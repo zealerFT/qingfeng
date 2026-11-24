@@ -11,6 +11,14 @@ Notable changes to Qingfeng are documented here. Version numbers match the app's
 - Exclude generated assets, local scan reports, and private development notes from version control.
 - Redact machine-specific screenshot content and remove embedded image metadata before public distribution.
 
+## [1.2.1] - 2026-11-24
+
+### Fixed
+
+- Visit known model directories and common personal folders before deep source trees during home-wide inventory scans. This keeps a large development checkout from consuming the traversal budget before those locations are examined.
+- Continue with the rest of the home directory without duplicating files; preserve symlink protections and explicit incomplete-scan notices.
+- Add a regression check for traversal priority and deduplication (53 core checks plus 8 HTTP checks).
+
 ## [1.2.0] - 2026-11-24
 
 ### Added
