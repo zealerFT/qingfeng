@@ -17,7 +17,7 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-**[直接下载清风 1.2.1（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.1)
+**[直接下载清风 1.2.2（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.2)
 
 支持 macOS 14 及以上 · 下载即可安装 · 无需 Xcode 或自行编译
 
@@ -54,11 +54,11 @@
 
 ### 安装包
 
-1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)**：`Qingfeng-1.2.1-AppleSilicon.zip`。
+1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)**：`Qingfeng-1.2.2-AppleSilicon.zip`。
 2. 退出清风，双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」；已有旧版本时选择「**替换**」。
 3. 在「应用程序」中打开「**清风**」，无需安装开发工具或编译源码。
 
-[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.1-AppleSilicon.zip**。
+[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.2-AppleSilicon.zip**。
 
 当前安装包使用 **ad-hoc 本地签名**，**尚未经过 Apple 公证**。如果 macOS 阻止打开你从本仓库下载并信任的应用，可先尝试打开一次，再到「系统设置 → 隐私与安全性」查看是否提供「仍要打开」。也可以自行构建源码。
 
@@ -125,7 +125,9 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 
 请填写所选协议支持的模型 ID，具体可用模型取决于服务商与账户。远程地址要求 HTTPS，本机回环服务允许 HTTP。AI 为可选功能，服务商可能收取调用费用。
 
-分析提示词要求模型解释用途、区分事实与推测、评估删除影响和恢复成本，并给出核实步骤；请求附带所选元数据与现有保护标记。**AI 不会执行命令或自动删除文件**，请核实建议后自行决定。
+分析会附带文件路径、父文件夹、存储位置、目录用途线索、大小、时间及保护标记。对于 Ollama 哈希文件，清风会核对本地的小型模型索引，提供精确匹配的模型标签、层类型与引用来源。共享引用和不完整查询都会标明；没有匹配不能证明文件可删。对话中直接显示位置，并可展开「**查看发送的分析资料**」检查实际发送的上下文。
+
+提示词要求根据证据给出「保留 / 满足条件后清理 / 信息不足」的结论，解释删除影响、恢复成本及所属应用的管理入口，区分目录推断与已核实引用。**AI 不会执行命令或自动删除文件**，请核实建议后自行决定。
 
 ### 扫描设置
 
@@ -174,7 +176,7 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 
 最多保留 2,000 条。导出报告和历史记录包含本机路径，分享前请检查并脱敏。
 
-AI 由你自行配置并主动发起。请求会将对话上下文和所选项目元数据（名称、路径、类型、大小、数量、时间、完整性与保护说明）发送给指定服务。主目录前缀替换为 `~`，其余路径片段仍可能包含私人信息。**不上传文件正文或整盘扫描报告**；连接测试只发送测试提问。密钥存入 macOS 钥匙串，非密钥设置保存在本机。对话仅保留在内存中，最多使用最近 16 条作为上下文。远程请求遵循服务商的数据保留政策，也可以选择本机 Ollama 或 LM Studio。
+AI 由你自行配置并主动发起。请求会将对话上下文和所选项目元数据（名称、文件及文件夹路径、目录用途线索、类型、大小、数量、时间、完整性与保护说明）发送给指定服务。分析 Ollama 哈希文件时，会限量读取同一存储位置下 `manifests` 目录内的小型 JSON 索引，仅发送匹配的模型标签、层类型、声明大小、引用路径和查询状态，不发送其他索引字段。主目录前缀替换为 `~`，其余路径与模型名称仍可能包含私人信息。**不上传所选文件正文或整盘扫描报告**；连接测试只发送测试提问。密钥存入 macOS 钥匙串，非密钥设置保存在本机。对话仅保留在内存中，最多使用最近 16 条作为上下文。远程请求遵循服务商的数据保留政策，也可以选择本机 Ollama 或 LM Studio。
 
 ## 开发
 
@@ -188,7 +190,7 @@ scripts/                 测试、构建与图标生成脚本
 docs/                    截图与发布说明
 ```
 
-执行 `bash scripts/test.sh`，运行 **53 项核心检查和 8 项本机 HTTP 通信检查**。覆盖清理安全、容量口径、扩大文件发现范围、稀疏文件、扫描限制、四种 AI 协议、流式边界、鉴权错误、拒绝重定向和取消。使用临时文件及本机 Python 3 模拟服务，不需要真实 API Key 或外部模型。检查程序不依赖 XCTest。
+执行 `bash scripts/test.sh`，运行 **58 项核心检查和 8 项本机 HTTP 通信检查**。覆盖清理安全、容量口径、文件发现、稀疏文件、扫描限制、AI 文件上下文、共享模型引用、不完整索引、四种 AI 协议、流式边界、鉴权错误、拒绝重定向和取消。使用临时文件及本机 Python 3 模拟服务，不需要真实 API Key 或外部模型。检查程序不依赖 XCTest。
 
 欢迎提交 Bug 和范围明确的 Pull Request。请提供应用版本、macOS 版本、芯片、复现步骤和完整提示，隐藏私人路径与名称。修改清理逻辑时，请使用临时测试数据补充回归检查。
 

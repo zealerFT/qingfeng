@@ -87,7 +87,12 @@ func require<T>(_ value: T?) throws -> T {
             ("testAIRejectsInsecureOrCredentialBearingEndpoints", suite.testAIRejectsInsecureOrCredentialBearingEndpoints),
             ("testAIStreamsDecodeTextAndIgnoreReasoningAndToolCalls", suite.testAIStreamsDecodeTextAndIgnoreReasoningAndToolCalls),
             ("testAIStreamsRejectErrorsMalformedAndOversizedData", suite.testAIStreamsRejectErrorsMalformedAndOversizedData),
-            ("testAIFilePromptRedactsHomeAndPreservesProtectionAsData", suite.testAIFilePromptRedactsHomeAndPreservesProtectionAsData)
+            ("testAIFilePromptRedactsHomeAndPreservesProtectionAsData", suite.testAIFilePromptRedactsHomeAndPreservesProtectionAsData),
+            ("testAIModelContextIdentifiesSharedReferencesAndLayers", suite.testAIModelContextIdentifiesSharedReferencesAndLayers),
+            ("testAIModelContextExplainsUnavailableAndIncompleteIndexes", suite.testAIModelContextExplainsUnavailableAndIncompleteIndexes),
+            ("testAIModelContextBoundsReadsAndReferences", suite.testAIModelContextBoundsReadsAndReferences),
+            ("testAIModelContextRejectsSymlinks", suite.testAIModelContextRejectsSymlinks),
+            ("testAIAnalysisIncludesVisibleLocationAndProtocolEvidence", suite.testAIAnalysisIncludesVisibleLocationAndProtocolEvidence)
         ]
         var passed = 0
         for (name, test) in tests {

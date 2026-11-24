@@ -55,11 +55,12 @@ struct AssistantMessage: Identifiable {
     @Published var showSettings = false
     @Published var error: String?
     @Published var pendingAnalysis: String?
+    @Published var preparingAnalysis: String?
     @Published var floatingIconEnabled: Bool {
         didSet { if !preview { UserDefaults.standard.set(floatingIconEnabled, forKey: "Qingfeng.aiFloatingIcon") } }
     }
     private let preview: Bool
-    private var pendingContent: String?
+    private var pendingItem: ScanItem?
     private var task: Task<Void, Never>?
     private var generation = UUID()
     private var lastRequest: [AIChatTurn] = []
@@ -85,19 +86,32 @@ struct AssistantMessage: Identifiable {
             UserDefaults.standard.set(data, forKey: Self.settingsKey)
         }
         configuration = config; showSettings = false; error = nil
-        if let display = pendingAnalysis, let content = pendingContent {
-            pendingAnalysis = nil; pendingContent = nil
-            send(display: display, content: content)
+        if let item = pendingItem {
+            pendingAnalysis = nil; pendingItem = nil
+            analyze(item)
         }
     }
     func analyze(_ item: ScanItem) {
         stop()
-        let display = "分析「\(item.title)」\n\(item.fileKind.title) · 文件大小 \(displayBytes(item.fileSize)) · 磁盘占用 \(displayBytes(item.bytes))"
-        let content = FileAnalysisPrompt.userMessage(for: item)
+        pendingAnalysis = nil; pendingItem = nil
         if !configured {
-            pendingAnalysis = display; pendingContent = content; showSettings = true; return
+            pendingAnalysis = FileAnalysisPrompt.displayMessage(for: item); pendingItem = item; showSettings = true; return
         }
-        send(display: display, content: content)
+        let token = UUID(); generation = token; busy = true; error = nil
+        preparingAnalysis = item.title
+        let worker = Task.detached(priority: .userInitiated) { try FileAnalysisContext.collect(for: item) }
+        task = Task { [weak self] in
+            do {
+                let context = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
+                guard let self, self.generation == token, !Task.isCancelled else { return }
+                self.task = nil; self.preparingAnalysis = nil
+                self.send(display: FileAnalysisPrompt.displayMessage(for: item, context: context),
+                          content: FileAnalysisPrompt.userMessage(for: item, context: context))
+            } catch {
+                guard let self, self.generation == token, !Task.isCancelled else { return }
+                self.error = error.localizedDescription; self.busy = false; self.task = nil; self.preparingAnalysis = nil
+            }
+        }
     }
     func sendInput() {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -145,11 +159,11 @@ struct AssistantMessage: Identifiable {
         start(lastRequest)
     }
     func stop() {
-        generation = UUID(); task?.cancel(); task = nil; busy = false
+        generation = UUID(); task?.cancel(); task = nil; busy = false; preparingAnalysis = nil
         messages.removeAll { $0.role == .assistant && $0.text.isEmpty }
     }
     func clear() {
         stop(); messages.removeAll(); lastRequest.removeAll(); lastResponseID = nil; error = nil
-        pendingAnalysis = nil; pendingContent = nil
+        pendingAnalysis = nil; pendingItem = nil
     }
 }

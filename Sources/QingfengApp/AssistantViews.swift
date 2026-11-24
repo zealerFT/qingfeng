@@ -43,11 +43,25 @@ struct AssistantView: View {
                                     if message.text.isEmpty && model.busy {
                                         HStack { ProgressView().controlSize(.small); Text("正在分析…").font(.system(size: 12)) }
                                     } else {
-                                        Text(.init(message.text)).font(.system(size: 13)).lineSpacing(5).textSelection(.enabled)
+                                        // File names and paths must render literally, including Markdown characters.
+                                        (message.role == .user ? Text(verbatim: message.text) : Text(.init(message.text)))
+                                            .font(.system(size: 13)).lineSpacing(5).textSelection(.enabled)
                                             .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    if let content = message.requestContent, content != message.text {
+                                        DisclosureGroup("查看发送的分析资料") {
+                                            Text(verbatim: content).font(.system(size: 11, design: .monospaced))
+                                                .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                                        }.font(.system(size: 11)).foregroundStyle(Theme.muted)
                                     }
                                 }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
                                     .background(message.role == .user ? Theme.pale : .white, in: RoundedRectangle(cornerRadius: 12))
+                            }
+                            if let name = model.preparingAnalysis {
+                                HStack(alignment: .top) {
+                                    ProgressView().controlSize(.small)
+                                    Text("正在整理「\(name)」的位置与模型引用…").font(.system(size: 12))
+                                }.padding(14)
                             }
                             if let error = model.error {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -70,7 +84,7 @@ struct AssistantView: View {
                         .textFieldStyle(.plain).font(.system(size: 13)).lineLimit(2...5)
                         .onSubmit { model.sendInput() }
                     HStack {
-                        Text("只发送提问和所选元数据，不上传文件正文。")
+                        Text("发送所选元数据与相关模型引用，不上传所选文件正文。")
                             .font(.system(size: 9)).foregroundStyle(Theme.muted)
                         Spacer()
                         if model.busy {
@@ -149,7 +163,7 @@ struct AISettingsView: View {
                     Button("读取此地址已保存的密钥") { loadKey() }.font(.system(size: 11))
                 }
                 Toggle("显示可拖动的桌面悬浮图标", isOn: $model.floatingIconEnabled).font(.system(size: 12))
-                Text("主动发送时，提问及所选文件的名称、路径（主目录显示为 ~）、类型、大小和时间会发给上述服务。文件正文与整盘扫描报告不会发送；AI 建议不会自动执行清理。")
+                Text("主动发送时，提问及所选文件的位置（主目录显示为 ~）、类型、大小、时间和目录用途会发给上述服务。Ollama 哈希文件会在本地读取同目录的小型模型索引，仅发送匹配的模型标签、层类型与引用来源。可在对话中展开查看分析资料；不上传所选文件正文或整盘报告，AI 不会自动清理。")
                     .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(4)
                 if let pending = model.pendingAnalysis {
                     Text("保存后自动开始：\(pending)").font(.system(size: 11)).foregroundStyle(Theme.accent)

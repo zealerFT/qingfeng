@@ -17,7 +17,7 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.2.1 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.1)
+**[Download Qingfeng 1.2.2 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.2)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
@@ -54,11 +54,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.1/Qingfeng-1.2.1-AppleSilicon.zip)** (`Qingfeng-1.2.1-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.2/Qingfeng-1.2.2-AppleSilicon.zip)** (`Qingfeng-1.2.2-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.1-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.2-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -125,7 +125,9 @@ Select eligible files with checkboxes or **全选当前结果** (Select All Curr
 
 Model availability depends on your provider and account. Enter a model ID supported by the selected protocol. Remote endpoints require HTTPS; HTTP is allowed on loopback for local services. AI is optional and may incur provider fees.
 
-The analysis prompt asks the model to explain the likely purpose, distinguish facts from guesses, assess deletion consequences and recovery cost, and suggest checks. It supplies selected metadata and existing protection flags. **AI cannot delete files or run commands.** Review its advice before making your own cleanup decision.
+Analysis includes the file path, parent folder, storage location, directory-purpose clues, sizes, dates, and protection flags. For Ollama hash blobs, Qingfeng checks small local manifest files and supplies exact matching model tags, layer types, and reference sources. Shared references and incomplete lookups are labeled; no matches do not establish that a blob is disposable. The chat shows the location and lets you expand **查看发送的分析资料** (View analysis material) to inspect the actual context sent.
+
+The prompt asks for a retain / conditional cleanup / insufficient information decision, grounded in those facts, with deletion consequences, recovery cost, and the appropriate application's management entry point. Directory-based guesses are distinguished from verified references. **AI cannot delete files or run commands.** Review its advice before making your own cleanup decision.
 
 ### Scan settings
 
@@ -174,7 +176,7 @@ Scanning and cleanup operate locally without network access, analytics, or sign-
 
 History is limited to 2,000 entries. Exported reports and history contain local paths; review them before sharing.
 
-AI is opt-in through your own service configuration. Sending a question or selected file analysis sends the conversation context and selected metadata (name, path, type, sizes, counts, dates, scan completeness, and protection notes) to that endpoint. The current home prefix is replaced with `~`; remaining path components can still be personal. **File contents and the full scan report are not uploaded.** Connection testing sends only a test question. API keys are stored in macOS Keychain, while nonsecret model settings are stored locally. Conversations are kept in memory, with up to 16 recent messages used for context. Your provider's retention policies apply to remote requests. You can use a local Ollama or LM Studio endpoint.
+AI is opt-in through your own service configuration. Sending a question or selected file analysis sends conversation context and selected metadata (name, file and folder paths, directory-purpose clues, type, sizes, counts, dates, scan completeness, and protection notes) to that endpoint. Ollama analysis reads bounded small JSON files from the selected blob's sibling `manifests` directory locally, sending only matching model tags, layer types, declared sizes, reference paths, and lookup status. Other manifest fields are excluded. The current home prefix is replaced with `~`; remaining paths and model names can still be personal. **The selected file's body and the full scan report are not uploaded.** Connection testing sends only a test question. API keys are stored in macOS Keychain, while nonsecret model settings are stored locally. Conversations are kept in memory, with up to 16 recent messages used for context. Your provider's retention policies apply to remote requests. You can use a local Ollama or LM Studio endpoint.
 
 ## Development
 
@@ -188,7 +190,7 @@ scripts/                 Test, build, and icon generation scripts
 docs/                    Screenshots and publishing instructions
 ```
 
-Run `bash scripts/test.sh` for **53 core checks and 8 loopback HTTP transport checks**. They cover cleanup safety, disk accounting, broader file discovery, sparse files, limits, four AI protocols, streaming boundaries, authentication errors, redirect refusal, and cancellation. Tests use temporary files and a local Python 3 fixture server; no real API keys or external model calls are needed. The runners do not depend on XCTest.
+Run `bash scripts/test.sh` for **58 core checks and 8 loopback HTTP transport checks**. They cover cleanup safety, disk accounting, file discovery, sparse files, limits, AI file context, shared model references, incomplete indexes, four AI protocols, streaming boundaries, authentication errors, redirect refusal, and cancellation. Tests use temporary files and a local Python 3 fixture server; no real API keys or external model calls are needed. The runners do not depend on XCTest.
 
 Bug reports and focused pull requests are welcome. Include the app version, macOS version, chip, reproduction steps, and the exact message. Redact private paths and names. Changes to cleanup behavior should include regression checks using temporary fixtures.
 
