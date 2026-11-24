@@ -58,7 +58,7 @@ struct AssistantView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(error).font(.system(size: 12)).foregroundStyle(Theme.amber)
                                     HStack {
-                                        Button("重试") { model.retry() }.disabled(model.busy)
+                                        Button(model.credentialAccessBlocked ? "解锁并重试" : "重试") { model.retry() }.disabled(model.busy)
                                         Button("检查配置") { model.showSettings = true }.disabled(model.busy)
                                     }.font(.system(size: 12))
                                 }.padding(12)
@@ -119,7 +119,7 @@ struct AISettingsView: View {
     @State private var message: String?
     @State private var testing = false
     @State private var testTask: Task<Void, Never>?
-    @State private var keyLoaded = true
+    @State private var removeSavedKey = false
     @State private var credentialScope = ""
     var body: some View {
         ScrollView {
@@ -131,7 +131,6 @@ struct AISettingsView: View {
                 }.onChange(of: preset) { _, value in
                     guard let selected = AIPreset.all.first(where: { $0.id == value }) else { return }
                     draft = AIConfiguration(provider: selected.provider, baseURL: selected.base)
-                    loadKey()
                 }
                 Picker("接口协议", selection: $draft.provider) {
                     ForEach(AIProvider.allCases) { Text($0.title).tag($0) }
@@ -148,10 +147,11 @@ struct AISettingsView: View {
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     Text("API Key").font(.system(size: 12, weight: .medium))
-                    SecureField("本机无鉴权服务可留空", text: $key).textFieldStyle(.roundedBorder)
-                    Text("密钥保存在 macOS 钥匙串。留空并保存会移除该地址的已存密钥。")
+                    SecureField("留空保留原密钥，填写新密钥可替换", text: $key)
+                        .textFieldStyle(.roundedBorder).disabled(removeSavedKey)
+                    Text("密钥安全保存在 macOS 钥匙串，解锁后在本次运行中复用。首次配置无鉴权的本机服务可留空。")
                         .font(.system(size: 10)).foregroundStyle(Theme.muted)
-                    Button("读取此地址已保存的密钥") { loadKey() }.font(.system(size: 11))
+                    Toggle("保存时移除此服务的密钥", isOn: $removeSavedKey).font(.system(size: 11))
                 }
                 Toggle("显示可拖动的桌面悬浮图标", isOn: $model.floatingIconEnabled).font(.system(size: 12))
                 Text("主动发送时，提问及所选文件的位置（主目录显示为 ~）、类型、大小、时间和目录用途会发给上述服务。Ollama 哈希文件会在本地读取同目录的小型模型索引，仅发送匹配的模型标签、层类型与引用来源。可在对话中展开查看分析资料；不上传所选文件正文或整盘报告，AI 不会自动清理。")
@@ -171,28 +171,32 @@ struct AISettingsView: View {
                         do {
                             draft.baseURL = draft.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
                             draft.model = draft.model.trimmingCharacters(in: .whitespacesAndNewlines)
-                            try model.save(draft, key: key)
+                            try model.save(draft, credential: credentialEdit)
                         } catch { message = error.localizedDescription }
-                    }.buttonStyle(PrimaryButton()).disabled(testing || !keyLoaded)
+                    }.buttonStyle(PrimaryButton()).disabled(testing)
                 }
             }.padding(22).font(.system(size: 12))
         }
-        .onAppear { draft = model.configuration; loadKey() }
+        .onAppear { draft = model.configuration; credentialScope = draft.credentialAccount }
         .onChange(of: draft.credentialAccount) { _, account in
             guard credentialScope != account else { return }
-            credentialScope = account; key = ""; keyLoaded = true; message = nil
+            credentialScope = account; key = ""; removeSavedKey = false; message = nil
         }
         .onDisappear { testTask?.cancel() }
     }
-    private func loadKey() {
-        credentialScope = draft.credentialAccount
-        if model.isPreview { key = ""; keyLoaded = true; return }
-        do { key = try AISecretStore.read(draft); keyLoaded = true; message = nil }
-        catch { keyLoaded = false; message = error.localizedDescription }
+    private var credentialEdit: AICredentialEdit {
+        if removeSavedKey { return .remove }
+        let value = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? .unchanged : .replace(value)
     }
     private func testConnection() {
+        let config = draft
+        let secret: String
+        do {
+            _ = try config.endpoint()
+            secret = try model.keyForConnectionTest(config, credential: credentialEdit)
+        } catch { message = error.localizedDescription; return }
         testing = true; message = nil
-        let config = draft; let secret = key
         testTask = Task {
             do {
                 var reply = ""

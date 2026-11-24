@@ -39,6 +39,54 @@ enum AISecretStore {
     }
 }
 
+enum AICredentialEdit {
+    case unchanged, replace(String), remove
+}
+
+/// Keep successful reads (including empty local-service keys) for this app run.
+/// A denied read is also remembered: only an explicit retry may ask macOS again.
+@MainActor final class AICredentialSession {
+    private enum Entry { case reading, loaded(String), failed(Error) }
+    private var entries: [String: Entry] = [:]
+    private let readSecret: (AIConfiguration) throws -> String
+    private let writeSecret: (String, AIConfiguration) throws -> Void
+
+    init(read: @escaping (AIConfiguration) throws -> String = AISecretStore.read,
+         write: @escaping (String, AIConfiguration) throws -> Void = AISecretStore.save) {
+        readSecret = read; writeSecret = write
+    }
+
+    func key(for config: AIConfiguration, retryAccess: Bool = false) throws -> String {
+        let account = config.credentialAccount
+        switch entries[account] {
+        case .loaded(let key): return key
+        case .failed(let error) where !retryAccess: throw error
+        case .reading: throw AIServiceError.configuration("正在读取此服务的密钥，请先完成 macOS 授权。")
+        default: break
+        }
+        entries[account] = .reading
+        do {
+            let key = try readSecret(config)
+            entries[account] = .loaded(key)
+            return key
+        } catch {
+            entries[account] = .failed(error)
+            throw error
+        }
+    }
+
+    func save(_ edit: AICredentialEdit, for config: AIConfiguration) throws {
+        let key: String
+        switch edit {
+        case .unchanged: return
+        case .replace(let value): key = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        case .remove: key = ""
+        }
+        try writeSecret(key, config)
+        entries[config.credentialAccount] = .loaded(key)
+    }
+}
+
 struct AssistantMessage: Identifiable {
     let id = UUID()
     let role: AIChatTurn.Role
@@ -54,12 +102,15 @@ struct AssistantMessage: Identifiable {
     @Published var busy = false
     @Published var showSettings = false
     @Published var error: String?
+    @Published private(set) var credentialAccessBlocked = false
     @Published var pendingAnalysis: String?
     @Published var preparingAnalysis: String?
     @Published var floatingIconEnabled: Bool {
         didSet { if !preview { UserDefaults.standard.set(floatingIconEnabled, forKey: "Qingfeng.aiFloatingIcon") } }
     }
     private let preview: Bool
+    private let credentials: AICredentialSession
+    private let stream: (AIConfiguration, String, [AIChatTurn]) -> AsyncThrowingStream<String, Error>
     private var pendingItem: ScanItem?
     private var task: Task<Void, Never>?
     private var generation = UUID()
@@ -67,8 +118,14 @@ struct AssistantMessage: Identifiable {
     private var lastResponseID: UUID?
     private static let settingsKey = "Qingfeng.aiConfiguration"
 
-    init(preview: Bool = false) {
+    init(preview: Bool = false, credentials: AICredentialSession? = nil,
+         stream: @escaping (AIConfiguration, String, [AIChatTurn]) -> AsyncThrowingStream<String, Error> = {
+             AIClient().stream(configuration: $0, apiKey: $1, turns: $2)
+         }) {
         self.preview = preview
+        self.credentials = credentials ?? (preview
+            ? AICredentialSession(read: { _ in "" }, write: { _, _ in }) : AICredentialSession())
+        self.stream = stream
         if !preview, let data = UserDefaults.standard.data(forKey: Self.settingsKey),
            let config = try? JSONDecoder().decode(AIConfiguration.self, from: data) { configuration = config }
         else { configuration = AIConfiguration() }
@@ -78,17 +135,24 @@ struct AssistantMessage: Identifiable {
     var isPreview: Bool { preview }
     var serviceLabel: String { configured ? "\(configuration.provider.title) · \(configuration.model)" : "配置模型后开始咨询" }
 
-    func save(_ config: AIConfiguration, key: String) throws {
+    func save(_ config: AIConfiguration, credential: AICredentialEdit = .unchanged) throws {
         _ = try config.endpoint()
+        try credentials.save(credential, for: config)
         if !preview {
-            try AISecretStore.save(key.trimmingCharacters(in: .whitespacesAndNewlines), config: config)
             let data = try JSONEncoder().encode(config)
             UserDefaults.standard.set(data, forKey: Self.settingsKey)
         }
-        configuration = config; showSettings = false; error = nil
+        configuration = config; showSettings = false; error = nil; credentialAccessBlocked = false
         if let item = pendingItem {
             pendingAnalysis = nil; pendingItem = nil
             analyze(item)
+        }
+    }
+    func keyForConnectionTest(_ config: AIConfiguration, credential: AICredentialEdit) throws -> String {
+        switch credential {
+        case .unchanged: return try credentials.key(for: config, retryAccess: true)
+        case .replace(let value): return value.trimmingCharacters(in: .whitespacesAndNewlines)
+        case .remove: return ""
         }
     }
     func analyze(_ item: ScanItem) {
@@ -127,20 +191,21 @@ struct AssistantMessage: Identifiable {
         }
         start(turns)
     }
-    private func start(_ turns: [AIChatTurn]) {
-        stop(); error = nil
+    private func start(_ turns: [AIChatTurn], retryCredentialAccess: Bool = false) {
+        stop(); error = nil; credentialAccessBlocked = false
         lastRequest = turns; lastResponseID = nil
         let key: String
-        do { key = preview ? "" : try AISecretStore.read(configuration) }
-        catch { self.error = error.localizedDescription; showSettings = true; return }
+        do { key = try credentials.key(for: configuration, retryAccess: retryCredentialAccess) }
+        catch { self.error = error.localizedDescription; credentialAccessBlocked = true; return }
         let config = configuration
         let response = AssistantMessage(role: .assistant, text: "")
         messages.append(response)
         lastResponseID = response.id
         let token = UUID(); generation = token; busy = true
+        let stream = self.stream
         task = Task { [weak self] in
             do {
-                for try await chunk in AIClient().stream(configuration: config, apiKey: key, turns: turns) {
+                for try await chunk in stream(config, key, turns) {
                     guard let self, self.generation == token, !Task.isCancelled else { return }
                     if let index = self.messages.firstIndex(where: { $0.id == response.id }) { self.messages[index].text += chunk }
                 }
@@ -156,14 +221,14 @@ struct AssistantMessage: Identifiable {
     func retry() {
         guard !busy, !lastRequest.isEmpty else { return }
         messages.removeAll { $0.id == lastResponseID }
-        start(lastRequest)
+        start(lastRequest, retryCredentialAccess: credentialAccessBlocked)
     }
     func stop() {
         generation = UUID(); task?.cancel(); task = nil; busy = false; preparingAnalysis = nil
         messages.removeAll { $0.role == .assistant && $0.text.isEmpty }
     }
     func clear() {
-        stop(); messages.removeAll(); lastRequest.removeAll(); lastResponseID = nil; error = nil
+        stop(); messages.removeAll(); lastRequest.removeAll(); lastResponseID = nil; error = nil; credentialAccessBlocked = false
         pendingAnalysis = nil; pendingItem = nil
     }
 }

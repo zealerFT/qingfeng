@@ -15,7 +15,12 @@ private final class DragProbePanel: NSPanel {
 }
 
 @main enum WindowChecks {
-    @MainActor static func main() {
+    @MainActor static func main() async throws {
+        checkWindows()
+        try await CredentialChecks.run()
+    }
+
+    @MainActor static func checkWindows() {
         _ = NSApplication.shared
         NSApplication.shared.setActivationPolicy(.prohibited)
         setbuf(stdout, nil)

@@ -17,7 +17,7 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.2.3 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.3)
+**[Download Qingfeng 1.2.4 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.4/Qingfeng-1.2.4-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.4)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
@@ -54,11 +54,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)** (`Qingfeng-1.2.3-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.4/Qingfeng-1.2.4-AppleSilicon.zip)** (`Qingfeng-1.2.4-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.3-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.4-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -115,6 +115,8 @@ Select eligible files with checkboxes or **全选当前结果** (Select All Curr
 2. In the assistant's settings, choose a preset or protocol, enter the API base URL, model ID, and API key. Local services without authentication can leave the key empty. **测试连接** (Test Connection) sends a short request to that service.
 3. Right-click an item in Cleanup Items, Large Files, or Important Data, then select **发送给 AI 分析** (Send to AI). Analysis starts immediately; no extra Enter is required. On first use, **保存并分析** (Save & Analyze) continues the pending request after configuration.
 4. Ask follow-up questions, stop a response, retry a failed request, or start a new conversation. The minus button collapses the panel back to its icon; settings can hide the icon.
+
+Saved API keys are reused in memory while Qingfeng runs, separately for each protocol and service address. Opening settings does not read Keychain. Leave the key field blank to keep the saved key, enter a new key to replace it, or select **保存时移除此服务的密钥** to remove it on save. If Keychain access is denied, an inline **解锁并重试** (Unlock & Retry) button lets you try again; repeated file analyses do not repeat the authorization prompt. After an ad-hoc-signed app update, macOS may ask you to authorize the saved key on first use.
 
 | Protocol | Examples |
 | --- | --- |

@@ -17,7 +17,7 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-**[直接下载清风 1.2.3（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.3)
+**[直接下载清风 1.2.4（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.2.4/Qingfeng-1.2.4-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.4)
 
 支持 macOS 14 及以上 · 下载即可安装 · 无需 Xcode 或自行编译
 
@@ -54,11 +54,11 @@
 
 ### 安装包
 
-1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.3/Qingfeng-1.2.3-AppleSilicon.zip)**：`Qingfeng-1.2.3-AppleSilicon.zip`。
+1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.2.4/Qingfeng-1.2.4-AppleSilicon.zip)**：`Qingfeng-1.2.4-AppleSilicon.zip`。
 2. 退出清风，双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」；已有旧版本时选择「**替换**」。
 3. 在「应用程序」中打开「**清风**」，无需安装开发工具或编译源码。
 
-[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.3-AppleSilicon.zip**。
+[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.2.4-AppleSilicon.zip**。
 
 当前安装包使用 **ad-hoc 本地签名**，**尚未经过 Apple 公证**。如果 macOS 阻止打开你从本仓库下载并信任的应用，可先尝试打开一次，再到「系统设置 → 隐私与安全性」查看是否提供「仍要打开」。也可以自行构建源码。
 
@@ -115,6 +115,8 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 2. 在助手设置中选择预设或接口协议，填写 API 服务地址、模型 ID 和密钥。本机无鉴权服务可不填密钥。「**测试连接**」会向所选服务发送一条短请求。
 3. 在清理项目、大文件或重要数据中右键，选择「**发送给 AI 分析**」，立即开始，无需再回车。首次使用时，「**保存并分析**」会在完成配置后继续这条请求。
 4. 可追问、停止回答、重试失败请求或开始新对话。减号收起为图标，设置中可隐藏图标。
+
+保存的密钥在清风本次运行中复用，按接口协议和服务地址分别保存。打开设置不会读取钥匙串；密钥输入框留空会保留原密钥，填写新密钥可替换，勾选「**保存时移除此服务的密钥**」才会在保存时删除。若取消了钥匙串授权，对话内会显示「**解锁并重试**」，重复右键分析不会反复弹出授权窗口。由于当前版本使用 ad-hoc 签名，升级后首次使用已存密钥时，macOS 可能要求重新授权。
 
 | 接口协议 | 示例服务 |
 | --- | --- |
