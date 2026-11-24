@@ -11,6 +11,9 @@ iconutil -c icns Resources/AppIcon.iconset -o Resources/AppIcon.icns
 app_path="dist/清风.app"
 mkdir -p "$app_path/Contents/MacOS" "$app_path/Contents/Resources"
 cp .build/arm64-apple-macosx/release/Qingfeng "$app_path/Contents/MacOS/Qingfeng"
+# SwiftPM release builds retain linker debug records with absolute object paths.
+# Keep those in .build for development, but exclude them from the distributed app.
+strip -S "$app_path/Contents/MacOS/Qingfeng"
 cp Resources/Info.plist "$app_path/Contents/Info.plist"
 cp Resources/AppIcon.icns Resources/Icon.png "$app_path/Contents/Resources/"
 codesign --force --sign - --timestamp=none "$app_path"
