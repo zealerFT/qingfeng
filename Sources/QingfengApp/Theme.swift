@@ -8,6 +8,7 @@ enum Theme {
     static let sidebar = Color(red: 0.93, green: 0.95, blue: 0.93)
     static let line = Color(red: 0.87, green: 0.90, blue: 0.87)
     static let pale = Color(red: 0.88, green: 0.94, blue: 0.90)
+    static let otherStorage = Color(red: 0.58, green: 0.65, blue: 0.68)
     static let amber = Color(red: 0.62, green: 0.42, blue: 0.18)
 }
 

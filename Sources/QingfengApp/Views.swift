@@ -90,7 +90,7 @@ struct RootView: View {
 
     private var overview: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 23) {
+            VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 9) {
                         Text("给 Mac，一点呼吸的空间。").font(.system(size: 29, weight: .semibold))
@@ -103,7 +103,7 @@ struct RootView: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("从这里开始整理").font(.system(size: 16, weight: .semibold))
                     Spacer()
-                    Text(model.report == nil ? "扫描后显示实际占用" : "按占用大小排序 · 默认不勾选")
+                    Text(model.hasCleanupScan ? "下方四类合计为清理项目 · 占比按磁盘总容量" : "扫描后显示占用与整盘占比")
                         .font(.system(size: 11)).foregroundStyle(Theme.muted)
                 }
                 HStack(spacing: 12) {
@@ -124,64 +124,91 @@ struct RootView: View {
     }
 
     private var storageCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        let space = model.diskSpace
+        let cleanupFraction = space.fraction(of: space.cleanup ?? 0)
+        let usedFraction = space.fraction(of: space.used)
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Label("磁盘空间", systemImage: "internaldrive").font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Text("Macintosh HD").font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.muted)
+                Text("当前用户所在磁盘").font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.muted)
                     .padding(.horizontal, 10).padding(.vertical, 6).background(Theme.background, in: Capsule())
             }
             HStack(spacing: 33) {
                 ZStack {
                     Circle().stroke(Theme.pale, lineWidth: 17)
-                    Circle().trim(from: 0, to: model.usedFraction).stroke(Theme.accent, style: StrokeStyle(lineWidth: 17, lineCap: .round)).rotationEffect(.degrees(-90))
+                    Circle().trim(from: cleanupFraction, to: usedFraction)
+                        .stroke(Theme.otherStorage, lineWidth: 17).rotationEffect(.degrees(-90))
+                    Circle().trim(from: 0, to: cleanupFraction)
+                        .stroke(Theme.accent, lineWidth: 17).rotationEffect(.degrees(-90))
                     VStack(spacing: 7) {
                         Text("可用空间").font(.system(size: 11)).foregroundStyle(Theme.muted)
-                        Text(displayBytes(model.available)).font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
-                        Text("共 \(displayBytes(model.total))").font(.system(size: 10)).foregroundStyle(Theme.muted)
+                        Text(space.hasCapacity ? displayBytes(space.available) : "—").font(.system(size: 28, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
+                        Text(space.hasCapacity ? "共 \(displayBytes(space.total))" : "暂未读取到磁盘容量").font(.system(size: 10)).foregroundStyle(Theme.muted)
                     }.padding(20)
-                }.frame(width: 163, height: 163).padding(8)
-                VStack(alignment: .leading, spacing: 15) {
-                    HStack(spacing: 18) {
-                        legend("已用", value: displayBytes(max(0, model.total - model.available)), color: Theme.accent)
-                        legend("可用", value: displayBytes(model.available), color: Theme.pale)
-                    }
-                    Rectangle().fill(Theme.line).frame(height: 1)
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("待你确认的清理项目").font(.system(size: 11)).foregroundStyle(Theme.muted)
-                            Text(model.report == nil ? "等待扫描" : displayBytes(model.cleanableBytes))
-                                .font(.system(size: 31, weight: .semibold, design: .rounded)).foregroundStyle(Theme.accent)
-                        }
+                }.frame(width: 149, height: 149).padding(8)
+                VStack(alignment: .leading, spacing: 13) {
+                    HStack {
+                        Text("已用空间").foregroundStyle(Theme.muted)
+                        Text(space.hasCapacity ? displayBytes(space.used) : "—").fontWeight(.semibold)
                         Spacer()
-                        if model.report != nil {
-                            Button { model.page = .clean; model.filter = nil } label: {
-                                HStack(spacing: 6) { Text("查看 \(model.cleanable.count) 项"); Image(systemName: "arrow.right") }
-                            }.buttonStyle(QuietButton())
-                        }
+                        Text("占整盘 \(diskPercentage(space.used))").foregroundStyle(Theme.muted)
+                    }.font(.system(size: 12))
+                    Rectangle().fill(Theme.line).frame(height: 1)
+                    storageLegend("待确认清理项目", bytes: space.cleanup, color: Theme.accent,
+                                  placeholder: model.hasCleanupScan ? "—" : "等待扫描")
+                    storageLegend(model.hasCleanupScan ? "其他已用空间" : "已用空间 · 待分类", bytes: space.otherUsed, color: Theme.otherStorage)
+                    storageLegend("可用空间", bytes: space.available, color: Theme.pale)
+                    if model.hasCleanupScan {
+                        Button { model.page = .clean; model.filter = nil } label: {
+                            HStack(spacing: 6) { Text("查看 \(model.cleanable.count) 项清理项目"); Image(systemName: "arrow.right") }
+                        }.buttonStyle(.plain).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.accent)
                     }
-                    Text("按实际分配空间估算；移入废纸篓后仍占空间。")
-                        .font(.system(size: 10)).foregroundStyle(Theme.muted)
                 }.frame(maxWidth: .infinity)
             }
-        }.padding(24).panel()
+            VStack(alignment: .leading, spacing: 6) {
+                Text(model.hasCleanupScan
+                     ? "其他已用空间 = 已用空间 − 清理项目，包含系统、应用、个人文件、废纸篓、快照和未扫描内容；系统与应用未单独测量。"
+                     : "扫描后会将已用空间分为清理项目和其他已用空间；系统、应用与个人文件等也会占用磁盘。")
+                    .font(.system(size: 11)).lineSpacing(3)
+                Text(space.cleanupWasCapped
+                     ? "清理估算超过当前已用空间，图表已按已用空间封顶；请重新扫描核对。"
+                     : "占比均以磁盘总容量计算，数值为估算；移入废纸篓后仍占空间。")
+                    .font(.system(size: 10)).foregroundStyle(space.cleanupWasCapped ? Theme.amber : Theme.muted)
+            }.foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
+        }.padding(20).panel()
     }
 
-    private func legend(_ label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 7) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(label).foregroundStyle(Theme.muted)
-            Text(value).fontWeight(.medium)
-        }.font(.system(size: 11))
+    private func diskPercentage(_ bytes: Int64?) -> String {
+        guard let bytes, model.diskSpace.hasCapacity else { return "—" }
+        let fraction = model.diskSpace.fraction(of: bytes)
+        if fraction > 0 && fraction < 0.001 { return "<0.1%" }
+        return fraction.formatted(.percent.precision(.fractionLength(1)))
+    }
+
+    private func storageLegend(_ label: String, bytes: Int64?, color: Color, placeholder: String = "—") -> some View {
+        HStack(spacing: 9) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).font(.system(size: 12))
+            Spacer(minLength: 12)
+            Text(model.diskSpace.hasCapacity ? bytes.map(displayBytes) ?? placeholder : "—")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+            Text(diskPercentage(bytes)).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                .frame(width: 59, alignment: .trailing)
+        }.monospacedDigit()
     }
 
     private func categoryCard(_ category: ScanCategory) -> some View {
         let bytes = model.cleanable.filter { $0.category == category }.reduce(Int64(0)) { $0 + $1.bytes }
         return Button { model.page = .clean; model.filter = category } label: {
-            VStack(alignment: .leading, spacing: 13) {
+            VStack(alignment: .leading, spacing: 11) {
                 HStack { Image(systemName: category.symbol).font(.system(size: 18)).foregroundStyle(Theme.accent); Spacer(); Image(systemName: "arrow.up.right").font(.system(size: 9)).foregroundStyle(Theme.muted) }
                 Text(category.title).font(.system(size: 12, weight: .medium))
-                Text(model.report == nil ? "—" : displayBytes(bytes)).font(.system(size: 21, weight: .semibold, design: .rounded))
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(model.hasCleanupScan ? displayBytes(bytes) : "—").font(.system(size: 21, weight: .semibold, design: .rounded))
+                    Text(model.hasCleanupScan ? "占整盘 \(diskPercentage(bytes))" : "等待扫描")
+                        .font(.system(size: 10)).foregroundStyle(Theme.muted)
+                }
             }.frame(maxWidth: .infinity, alignment: .leading).padding(17).panel()
         }.buttonStyle(.plain)
     }

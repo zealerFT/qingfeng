@@ -11,6 +11,15 @@ Notable changes to Qingfeng are documented here. Version numbers match the app's
 - Exclude generated assets, local scan reports, and private development notes from version control.
 - Redact machine-specific screenshot content and remove embedded image metadata before public distribution.
 
+## [1.1.1] - 2026-11-24
+
+### Fixed
+
+- Explain the gap between disk usage and cleanup candidates with a three-part overview: cleanup candidates, other used space, and available space.
+- Show capacities and percentages using total disk capacity consistently, including the four cleanup category cards.
+- Describe other used space as the remainder including system files, apps, personal files, Trash, snapshots, and unscanned data, without claiming separate system/app measurements.
+- Distinguish unscanned space from an empty cleanup result, including after a folder-only large-file scan, and handle unavailable or inconsistent capacity estimates.
+
 ## [1.1.0] - 2026-11-13
 
 ### Added

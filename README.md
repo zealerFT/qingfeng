@@ -17,7 +17,7 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.1.0 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.1.0)
+**[Download Qingfeng 1.1.1 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.1.1/Qingfeng-1.1.1-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.1.1)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
@@ -27,7 +27,7 @@ The app is built with **SwiftUI and AppKit**, with no third-party dependencies. 
 
 ## Features
 
-- **Understand storage use.** Review disk capacity and cleanup candidates by category, with search and Finder shortcuts.
+- **Understand storage use.** See cleanup candidates, other used space, and available space as capacities and percentages of the whole disk, plus a breakdown of cleanup categories.
 - **Keep control of cleanup.** Nothing is selected by default. Each cleanup requires confirmation and a fresh check of file metadata.
 - **Remove large files in batches.** Select individual files or all eligible search results, review their paths and total size, and move them to Trash together.
 - **Manage developer caches.** Find known caches from npm, pip, uv, Homebrew, Go, Xcode, JetBrains IDEs, and browser testing tools.
@@ -52,11 +52,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)** (`Qingfeng-1.1.0-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.1.1/Qingfeng-1.1.1-AppleSilicon.zip)** (`Qingfeng-1.1.1-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.1.0-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.1.1-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -88,6 +88,12 @@ Use `bash scripts/build.sh` when you only need build artifacts for packaging or 
 5. Check **操作记录** (History) and the system Trash. Restore anything you need before emptying Trash in Finder.
 
 **勾选较旧项目** (Select Older Items) selects eligible items in the current list that have not changed for at least seven days and are not blocked by a detected running app. Review those selections yourself; age alone does not make a file unnecessary.
+
+### Reading the storage overview
+
+The ring accounts for the whole disk: **cleanup candidates + other used space + available space = total capacity**. The four cleanup cards show their share of the same total. Before a cleanup scan, used space is marked as awaiting classification.
+
+**Other used space** is the remainder after subtracting cleanup candidates from used space. It includes system files, installed apps, personal files, Trash, snapshots, and data outside the scan scope; system and app sizes are not measured separately. Large files and important data are already included in used space, so adding their lists again would double-count them. Figures are estimates, and percentages may differ slightly due to rounding.
 
 ### Batch large-file cleanup
 
@@ -150,7 +156,7 @@ scripts/                 Test, build, and icon generation scripts
 docs/                    Screenshots and publishing instructions
 ```
 
-Run `bash scripts/test.sh` for the standalone `QingfengCoreChecks` executable. It currently contains 37 checks, including path boundaries, symbolic links, changes after scanning, scan limits, app detection, batch large-file cleanup, and Trash behavior with synthetic files. The check runner does not depend on XCTest.
+Run `bash scripts/test.sh` for the standalone `QingfengCoreChecks` executable. It currently contains 41 checks, including disk-space accounting, path boundaries, symbolic links, changes after scanning, scan limits, app detection, batch large-file cleanup, and Trash behavior with synthetic files. The check runner does not depend on XCTest.
 
 Bug reports and focused pull requests are welcome. Include the app version, macOS version, chip, reproduction steps, and the exact message. Redact private paths and names. Changes to cleanup behavior should include regression checks using temporary fixtures.
 
@@ -158,7 +164,7 @@ See the [changelog](CHANGELOG.md) and [publishing guide](docs/PUBLISHING.md). Th
 
 ## Screenshots
 
-These privacy-edited captures show the Chinese interface from **v1.0.0**. Machine-specific storage figures, usage charts, item names, paths, counts, and scan times have been replaced with neutral placeholders. The current version adds scan settings and more specific scan notices; see the [changelog](CHANGELOG.md).
+The storage overview shows **v1.1.1** rendered with fictional example data. The cleanup screenshot is from **v1.0.0**, with private values, names, paths, counts, and scan times replaced by neutral placeholders. Neither image contains personal machine data. See the [changelog](CHANGELOG.md) for subsequent cleanup features.
 
 ### Storage overview
 

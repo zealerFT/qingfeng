@@ -34,7 +34,8 @@ import QingfengCore
         let model = AppModel()
         if let data = try? Data(contentsOf: URL(fileURLWithPath: reportPath)),
            let report = try? JSONDecoder().decode(ScanReport.self, from: data) {
-            model.report = report; model.status = "扫描完成 · \(report.date.formatted(date: .omitted, time: .shortened))"
+            model.report = report; model.hasCleanupScan = true
+            model.status = "扫描完成 · \(report.date.formatted(date: .omitted, time: .shortened))"
         }
         model.page = page
         let view = NSHostingView(rootView: RootView(model: model))

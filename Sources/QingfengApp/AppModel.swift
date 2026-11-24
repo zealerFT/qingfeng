@@ -48,6 +48,7 @@ final class HistoryStore: @unchecked Sendable {
         didSet { if page != oldValue { selected.removeAll() } }
     }
     @Published var report: ScanReport?
+    @Published var hasCleanupScan = false
     @Published var selected = Set<String>()
     @Published var busy = false
     @Published var cleaning = false
@@ -81,7 +82,9 @@ final class HistoryStore: @unchecked Sendable {
     var selectedItems: [ScanItem] { items.filter { selected.contains($0.id) && canSelect($0) } }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
     var cleanableBytes: Int64 { cleanable.reduce(0) { $0 + $1.bytes } }
-    var usedFraction: Double { total > 0 ? min(1, max(0, Double(total - available) / Double(total))) : 0 }
+    var diskSpace: DiskSpaceBreakdown {
+        DiskSpaceBreakdown(total: total, available: available, cleanup: hasCleanupScan ? cleanableBytes : nil)
+    }
     var visibleItems: [ScanItem] {
         items.filter { item in
             let match: Bool
@@ -125,7 +128,7 @@ final class HistoryStore: @unchecked Sendable {
             merged.items.append(contentsOf: result.items.filter { !existing.contains($0.path) })
             merged.issues.append(contentsOf: result.issues); merged.date = result.date; merged.cancelled = result.cancelled
             report = merged; page = .large
-        } else { report = result }
+        } else { report = result; hasCleanupScan = true }
         busy = false; cancelling = false
         status = result.cancelled ? "扫描已停止，显示已完成的结果" : "扫描完成 · \(result.date.formatted(date: .omitted, time: .shortened))"
         refreshDisk()
@@ -181,6 +184,7 @@ final class HistoryStore: @unchecked Sendable {
         UserDefaults.standard.set(value, forKey: Self.directoryLimitKey)
         showSettings = false
         report = nil
+        hasCleanupScan = false
         selected.removeAll()
         status = "扫描上限已设置为 \(value.formatted()) 项，正在重新扫描…"
         scan()

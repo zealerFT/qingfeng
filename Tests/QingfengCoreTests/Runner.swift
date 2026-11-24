@@ -68,7 +68,11 @@ func require<T>(_ value: T?) throws -> T {
             ("testIDEFallbackProtectsOnlySameProductWhenVersionUnknown", suite.testIDEFallbackProtectsOnlySameProductWhenVersionUnknown),
             ("testRunningBrainAndChromeStillProtectedWithActionableNames", suite.testRunningBrainAndChromeStillProtectedWithActionableNames),
             ("testUnrelatedIDEAllowsFixtureCleanupButActiveIDEIsBlocked", suite.testUnrelatedIDEAllowsFixtureCleanupButActiveIDEIsBlocked),
-            ("testDirectoryScanLimitIsConfigurableAndBounded", suite.testDirectoryScanLimitIsConfigurableAndBounded)
+            ("testDirectoryScanLimitIsConfigurableAndBounded", suite.testDirectoryScanLimitIsConfigurableAndBounded),
+            ("testDiskBreakdownAccountsForTheWholeVolume", suite.testDiskBreakdownAccountsForTheWholeVolume),
+            ("testDiskBreakdownDistinguishesUnscannedFromEmpty", suite.testDiskBreakdownDistinguishesUnscannedFromEmpty),
+            ("testDiskBreakdownHandlesUnknownCapacity", suite.testDiskBreakdownHandlesUnknownCapacity),
+            ("testDiskBreakdownBoundsStaleOrSharedStorageEstimates", suite.testDiskBreakdownBoundsStaleOrSharedStorageEstimates)
         ]
         var passed = 0
         for (name, test) in tests {

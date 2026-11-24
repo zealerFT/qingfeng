@@ -17,7 +17,7 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-**[直接下载清风 1.1.0（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.1.0)
+**[直接下载清风 1.1.1（Apple Silicon 安装包）](https://github.com/zealerFT/qingfeng/releases/download/v1.1.1/Qingfeng-1.1.1-AppleSilicon.zip)** · [版本说明](https://github.com/zealerFT/qingfeng/releases/tag/v1.1.1)
 
 支持 macOS 14 及以上 · 下载即可安装 · 无需 Xcode 或自行编译
 
@@ -27,7 +27,7 @@
 
 ## 功能
 
-- **看清空间占用**：按类别查看磁盘与清理候选，支持搜索和 Finder 定位。
+- **看清空间占用**：展示清理项目、其他已用空间和可用空间的容量与整盘占比，并细分四类清理项目。
 - **自主确认清理**：默认不勾选任何项目；每次操作都需确认，并重新检查文件属性。
 - **批量整理大文件**：逐项勾选或全选当前可操作的搜索结果，核对路径与总大小后，一起移入废纸篓。
 - **整理开发缓存**：识别 npm、pip、uv、Homebrew、Go、Xcode、JetBrains IDE 和浏览器测试工具的已知缓存。
@@ -52,11 +52,11 @@
 
 ### 安装包
 
-1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.1.0/Qingfeng-1.1.0-AppleSilicon.zip)**：`Qingfeng-1.1.0-AppleSilicon.zip`。
+1. **[点击下载安装包](https://github.com/zealerFT/qingfeng/releases/download/v1.1.1/Qingfeng-1.1.1-AppleSilicon.zip)**：`Qingfeng-1.1.1-AppleSilicon.zip`。
 2. 退出清风，双击 ZIP 解压，将 **清风.app** 拖入「**应用程序**」；已有旧版本时选择「**替换**」。
 3. 在「应用程序」中打开「**清风**」，无需安装开发工具或编译源码。
 
-[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.1.0-AppleSilicon.zip**。
+[版本页面](https://github.com/zealerFT/qingfeng/releases/latest) 自动生成的 **Source code** 是给开发者使用的源码；普通用户请选择 **Qingfeng-1.1.1-AppleSilicon.zip**。
 
 当前安装包使用 **ad-hoc 本地签名**，**尚未经过 Apple 公证**。如果 macOS 阻止打开你从本仓库下载并信任的应用，可先尝试打开一次，再到「系统设置 → 隐私与安全性」查看是否提供「仍要打开」。也可以自行构建源码。
 
@@ -88,6 +88,12 @@ dist/Qingfeng-<版本>-AppleSilicon.zip
 5. 在「**操作记录**」和系统废纸篓中检查结果。需要保留的内容应先还原，再自行清空废纸篓。
 
 「**勾选较旧项目**」会选择当前列表中至少七天未更新、允许清理且未检测到相关应用运行的项目。仍需逐项确认用途，文件较旧不代表一定不再需要。
+
+### 理解空间总览
+
+环形图展示整块磁盘：**清理项目 + 其他已用空间 + 可用空间 = 磁盘总容量**。下方四张清理卡片也使用磁盘总容量计算占比。尚未进行清理扫描时，已用空间标为「待分类」。
+
+「**其他已用空间**」是已用空间减去清理项目后的差额，包含系统文件、已安装应用、个人文件、废纸篓、快照及扫描范围外的数据；系统与应用未分别测量。「大文件」和「重要数据」已经包含在已用空间中，不应再次相加。所有数值均为估算，占比可能因四舍五入存在细微差异。
 
 ### 批量整理大文件
 
@@ -150,7 +156,7 @@ scripts/                 测试、构建与图标生成脚本
 docs/                    截图与发布说明
 ```
 
-执行 `bash scripts/test.sh` 运行独立的 `QingfengCoreChecks`。当前包含 37 项检查，覆盖路径边界、符号链接、扫描后变化、扫描上限、应用占用、大文件批量清理，以及自建临时文件的废纸篓行为。检查程序不依赖 XCTest。
+执行 `bash scripts/test.sh` 运行独立的 `QingfengCoreChecks`。当前包含 41 项检查，覆盖磁盘空间构成、路径边界、符号链接、扫描后变化、扫描上限、应用占用、大文件批量清理，以及自建临时文件的废纸篓行为。检查程序不依赖 XCTest。
 
 欢迎提交 Bug 和范围明确的 Pull Request。请提供应用版本、macOS 版本、芯片、复现步骤和完整提示，隐藏私人路径与名称。修改清理逻辑时，请使用临时测试数据补充回归检查。
 
@@ -158,7 +164,7 @@ docs/                    截图与发布说明
 
 ## 应用截图
 
-以下截图来自 **v1.0.0** 的中文界面，已做隐私处理：本机容量、占用图表、项目名称、路径、数量及扫描时间均替换为通用占位内容。当前版本增加了扫描设置，并细化了扫描提示，详见[更新记录](CHANGELOG.md)。
+空间总览为 **v1.1.1** 界面，使用虚构示例数据渲染。清理项目截图来自 **v1.0.0**，私人容量、名称、路径、数量和扫描时间已替换为通用占位内容。两张图均不包含个人电脑数据；后续清理功能见[更新记录](CHANGELOG.md)。
 
 ### 空间总览
 
