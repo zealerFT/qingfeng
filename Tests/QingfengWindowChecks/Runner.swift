@@ -18,29 +18,18 @@ private final class DragProbePanel: NSPanel {
     @MainActor static func main() async throws {
         checkWindows()
         try await CredentialChecks.run()
+        try await StorageChecks.run()
     }
 
     @MainActor static func checkWindows() {
         _ = NSApplication.shared
         NSApplication.shared.setActivationPolicy(.prohibited)
         setbuf(stdout, nil)
-        let screens = [NSRect(x: 0, y: 0, width: 1440, height: 900),
-                       NSRect(x: 1440, y: 0, width: 1920, height: 1080)]
-        let size = NSSize(width: 64, height: 64)
-        // Crossing a boundary must choose the destination screen even while the old one intersects.
-        let crossed = AssistantWindowPlacement.visibleOrigin(NSPoint(x: 1430, y: 400), size: size, screens: screens)
-        precondition(crossed.x == 1448)
-        let free = NSPoint(x: 2400, y: 700)
-        precondition(AssistantWindowPlacement.visibleOrigin(free, size: size, screens: screens) == free)
-        let leftScreen = NSRect(x: -1920, y: 200, width: 1920, height: 1080)
-        precondition(AssistantWindowPlacement.visibleOrigin(NSPoint(x: -1700, y: 600), size: size, screens: [screens[0], leftScreen]).x == -1700)
-        let restored = AssistantWindowPlacement.visibleOrigin(free, size: size, screens: [screens[0]])
-        precondition(screens[0].contains(NSRect(origin: restored, size: size)))
-        print("PASS destination screen selection, negative coordinates and disconnected-screen recovery")
-
         let panel = DragProbePanel(contentRect: NSRect(x: 300, y: 300, width: 1180, height: 800),
                                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        let container = AssistantBubbleContainer(preview: true)
+        let embeddedModel = AssistantModel(preview: true)
+        embeddedModel.floatingIconEnabled = true
+        let container = AssistantBubbleContainer(model: embeddedModel)
         panel.contentView = container
         container.layoutSubtreeIfNeeded()
         let bubble = container.bubble
@@ -85,14 +74,52 @@ private final class DragProbePanel: NSPanel {
         precondition(opened == 2)
         print("PASS icon stays inside main window during all four edge drags, resize and window movement; background stays clickable")
 
+        func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+        embeddedModel.conversationVisible = true
+        container.updateVisibility()
+        panel.setContentSize(NSSize(width: 1180, height: 800))
+        container.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        container.layoutSubtreeIfNeeded()
+        let conversation = container.conversation
+        guard let embeddedBar = descendants(conversation).compactMap({ $0 as? AssistantTitleBarView }).first else {
+            fatalError("Missing embedded title bar")
+        }
+        let parentFrame = panel.frame
+        for destination in [NSPoint(x: -4000, y: 400), NSPoint(x: 4000, y: 400),
+                            NSPoint(x: 500, y: -4000), NSPoint(x: 500, y: 4000)] {
+            embeddedBar.dragArea.mouseDown(with: event(.leftMouseDown, .zero))
+            embeddedBar.dragArea.mouseDragged(with: event(.leftMouseDragged, destination))
+            precondition(container.bounds.insetBy(dx: 8, dy: 8).contains(conversation.frame))
+            embeddedBar.dragArea.mouseUp(with: event(.leftMouseUp, destination))
+            precondition(conversation.window === panel && conversation.superview === container)
+        }
+        precondition(panel.dragCount == 0 && panel.frame == parentFrame)
+        print("PASS expanded conversation stays in its main window during four-edge title drags and never invokes window dragging")
+        for size in [NSSize(width: 700, height: 500), NSSize(width: 440, height: 490), NSSize(width: 1180, height: 800)] {
+            panel.setContentSize(size); container.layoutSubtreeIfNeeded()
+            precondition(container.bounds.insetBy(dx: 8, dy: 8).contains(conversation.frame))
+        }
+        let chatFrame = conversation.frame
+        for origin in [NSPoint(x: -1800, y: 450), NSPoint(x: 2200, y: -600), NSPoint(x: 100, y: 100)] {
+            panel.setFrameOrigin(origin)
+            precondition(conversation.frame == chatFrame && conversation.window === panel)
+        }
+        embeddedModel.input = "Preserved draft"
+        embeddedBar.collapseButton.performClick(nil)
+        precondition(conversation.isHidden && !container.bubble.isHidden && !embeddedModel.conversationVisible)
+        embeddedModel.conversationVisible = true; container.updateVisibility()
+        precondition(!conversation.isHidden && conversation.frame == chatFrame && embeddedModel.input == "Preserved draft")
+        print("PASS expanded chat resizes inside its parent, follows negative/other-display window positions and preserves state on collapse")
+
         let model = AssistantModel(preview: true)
         var collapsed = 0
-        let host = AssistantHostingView(rootView: AssistantView(model: model, collapse: { collapsed += 1 }))
+        var titleDrags = 0
+        let host = AssistantHostingView(rootView: AssistantView(model: model, collapse: { collapsed += 1 }, drag: { _ in titleDrags += 1 }))
         let chatPanel = DragProbePanel(contentRect: NSRect(x: 300, y: 100, width: 480, height: 650),
                                        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         chatPanel.contentView = host
         precondition(!host.mouseDownCanMoveWindow && host.acceptsFirstMouse(for: nil))
-        func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
         for width in [420.0, 480.0, 700.0] {
             chatPanel.setContentSize(NSSize(width: width, height: 650))
             host.layoutSubtreeIfNeeded()
@@ -113,11 +140,13 @@ private final class DragProbePanel: NSPanel {
             let before = collapsed
             button.performClick(nil)
             precondition(collapsed == before + 1 && chatPanel.dragCount == 0)
+            let beforeDrag = titleDrags
             bar.dragArea.mouseDown(with: event(.leftMouseDown, .zero))
-            precondition(chatPanel.dragCount == 1)
-            chatPanel.dragCount = 0
+            bar.dragArea.mouseDragged(with: event(.leftMouseDragged, NSPoint(x: 100, y: 100)))
+            bar.dragArea.mouseUp(with: event(.leftMouseUp, NSPoint(x: 100, y: 100)))
+            precondition(titleDrags == beforeDrag + 1 && chatPanel.dragCount == 0)
         }
-        print("PASS full collapse hit area at three widths; click routes to collapse, only title drag moves window")
+        print("PASS full collapse hit area at three widths; click routes to collapse, title dragging never moves the parent window")
         model.busy = true
         RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         host.layoutSubtreeIfNeeded()
@@ -140,13 +169,19 @@ private final class DragProbePanel: NSPanel {
         precondition(embedded.bubble.window === rootPanel && !embedded.bubble.isHidden)
         let iconPoint = embedded.bubble.convert(NSPoint(x: 32, y: 32), to: rootHost.superview)
         precondition(rootHost.hitTest(iconPoint) === embedded.bubble)
-        appModel.assistant.conversationVisible = true
+        let windowCount = NSApplication.shared.windows.count
+        appModel.openAssistant()
         RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        precondition(embedded.bubble.isHidden)
-        appModel.assistant.conversationVisible = false
+        precondition(embedded.bubble.isHidden && !embedded.conversation.isHidden)
+        precondition(embedded.conversation.window === rootPanel && NSApplication.shared.windows.count == windowCount)
+        rootHost.layoutSubtreeIfNeeded()
+        let rootBar = descendants(embedded.conversation).compactMap { $0 as? AssistantTitleBarView }.first!
+        let rootCollapsePoint = rootBar.collapseButton.convert(NSPoint(x: 18, y: 18), to: rootHost.superview)
+        precondition(rootHost.hitTest(rootCollapsePoint) === rootBar.collapseButton)
+        rootBar.collapseButton.performClick(nil)
         RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        precondition(!embedded.bubble.isHidden)
-        print("PASS real main view embeds icon in the same window and hides/restores it when the conversation opens/collapses")
-        print("Assistant window checks: 5/5 passed")
+        precondition(!embedded.bubble.isHidden && embedded.conversation.isHidden && !appModel.assistant.conversationVisible)
+        print("PASS real main view opens both assistant states in the same window, creates no extra window and routes collapse correctly")
+        print("Assistant window checks: 6/6 passed")
     }
 }

@@ -4,10 +4,14 @@ import QingfengCore
 struct AssistantView: View {
     @ObservedObject var model: AssistantModel
     var collapse: () -> Void
+    var beginDrag: () -> Void = {}
+    var drag: (NSPoint) -> Void = { _ in }
+    var endDrag: () -> Void = {}
     var body: some View {
         VStack(spacing: 0) {
             AssistantTitleBar(subtitle: model.serviceLabel, busy: model.busy,
-                              settings: { model.showSettings.toggle() }, newChat: { model.clear() }, collapse: collapse)
+                              settings: { model.showSettings.toggle() }, newChat: { model.clear() }, collapse: collapse,
+                              beginDrag: beginDrag, drag: drag, endDrag: endDrag)
                 .frame(height: 72).background(Theme.sidebar)
             if model.showSettings {
                 AISettingsView(model: model)
@@ -58,11 +62,7 @@ struct AssistantView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(error).font(.system(size: 12)).foregroundStyle(Theme.amber)
                                     HStack {
-                                        if model.credentialAccessBlocked {
-                                            Button("授权并发送") { model.authorizeAndRetry() }.disabled(model.busy)
-                                        } else {
-                                            Button("重试") { model.retry() }.disabled(model.busy)
-                                        }
+                                        Button("重试") { model.retry() }.disabled(model.busy)
                                         Button("检查配置") { model.showSettings = true }.disabled(model.busy)
                                     }.font(.system(size: 12))
                                 }.padding(12)
@@ -94,7 +94,7 @@ struct AssistantView: View {
             }
         }.background(Theme.background).foregroundStyle(Theme.ink).tint(Theme.accent)
             .preferredColorScheme(.light).clipShape(RoundedRectangle(cornerRadius: 16))
-            .frame(minWidth: 420, minHeight: 480)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -153,14 +153,11 @@ struct AISettingsView: View {
                     Text("API Key").font(.system(size: 12, weight: .medium))
                     SecureField("留空保留原密钥，填写新密钥可替换", text: $key)
                         .textFieldStyle(.roundedBorder).disabled(removeSavedKey)
-                    Text("密钥安全保存在 macOS 钥匙串，解锁后在本次运行中复用。首次配置无鉴权的本机服务可留空。")
+                    Text("配置与密钥由清风在本机加密保存，重启和更新后自动复用。本机无鉴权服务可留空。")
                         .font(.system(size: 10)).foregroundStyle(Theme.muted)
-                    Button("授权读取已存密钥…") {
-                        do {
-                            try model.authorizeCredential(draft)
-                            message = "已读取此服务的密钥，可以直接对话。"
-                        } catch { message = error.localizedDescription }
-                    }.font(.system(size: 11)).disabled(testing)
+                    if draft.credentialAccount == model.configuration.credentialAccount, let notice = model.configurationNotice {
+                        Text(notice).font(.system(size: 11)).foregroundStyle(Theme.amber)
+                    }
                     Toggle("保存时移除此服务的密钥", isOn: $removeSavedKey).font(.system(size: 11))
                 }
                 Toggle("在清风窗口内显示 AI 悬浮图标", isOn: $model.floatingIconEnabled).font(.system(size: 12))

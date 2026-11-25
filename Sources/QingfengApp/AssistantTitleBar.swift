@@ -1,19 +1,23 @@
 import AppKit
 import SwiftUI
 
-/// Native controls keep first-click handling and window dragging separate.
+/// Native controls keep first-click handling separate from the embedded chat's drag area.
 struct AssistantTitleBar: NSViewRepresentable {
     var subtitle: String
     var busy: Bool
     var settings: () -> Void
     var newChat: () -> Void
     var collapse: () -> Void
+    var beginDrag: () -> Void
+    var drag: (NSPoint) -> Void
+    var endDrag: () -> Void
 
     func makeNSView(context: Context) -> AssistantTitleBarView { AssistantTitleBarView() }
     func updateNSView(_ view: AssistantTitleBarView, context: Context) {
         view.dragArea.subtitle.stringValue = subtitle
         view.settingsButton.isEnabled = !busy
         view.settings = settings; view.newChat = newChat; view.collapse = collapse
+        view.dragArea.beginDrag = beginDrag; view.dragArea.drag = drag; view.dragArea.endDrag = endDrag
     }
 }
 
@@ -81,6 +85,10 @@ final class AssistantTitleButton: NSButton {
 
 final class AssistantDragArea: NSView {
     let subtitle = NSTextField(labelWithString: "")
+    var beginDrag: (() -> Void)?
+    var drag: ((NSPoint) -> Void)?
+    var endDrag: (() -> Void)?
+    private var mouseStart = NSPoint.zero
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         let icon = NSImageView(image: NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)!)
@@ -104,11 +112,18 @@ final class AssistantDragArea: NSView {
             subtitle.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 3),
             subtitle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4)
         ])
-        toolTip = "拖动标题栏移动对话框"
+        toolTip = "拖动标题栏，在清风窗口内移动对话框"
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override var mouseDownCanMoveWindow: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { super.hitTest(point) == nil ? nil : self }
-    override func mouseDown(with event: NSEvent) { window?.performDrag(with: event) }
+    override func mouseDown(with event: NSEvent) {
+        mouseStart = event.locationInWindow
+        beginDrag?()
+    }
+    override func mouseDragged(with event: NSEvent) {
+        drag?(NSPoint(x: event.locationInWindow.x - mouseStart.x, y: event.locationInWindow.y - mouseStart.y))
+    }
+    override func mouseUp(with event: NSEvent) { endDrag?() }
 }

@@ -17,7 +17,7 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.2.5 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.5/Qingfeng-1.2.5-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.5)
+**[Download Qingfeng 1.2.6 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.6/Qingfeng-1.2.6-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.6)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
@@ -54,11 +54,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.5/Qingfeng-1.2.5-AppleSilicon.zip)** (`Qingfeng-1.2.5-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.6/Qingfeng-1.2.6-AppleSilicon.zip)** (`Qingfeng-1.2.6-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.5-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.6-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -111,12 +111,16 @@ Select eligible files with checkboxes or **全选当前结果** (Select All Curr
 
 ### AI assistant
 
-1. Open **AI 助手** or click the sparkle icon inside Qingfeng. The icon can be dragged within the main window and follows it when moved, resized, or minimized. Drag the conversation's title area to move it, and click **−** to return to the icon in the main window. Toolbar buttons accept the first click even while Qingfeng is inactive.
+1. Open **AI 助手** or click the sparkle icon inside Qingfeng. Both the icon and the expanded conversation stay inside the main window, including on multiple displays. Drag the icon or the conversation's title area to reposition it; moving, resizing, or minimizing Qingfeng keeps both with the app. Click **−** to return to the icon. Toolbar buttons accept the first click even while Qingfeng is inactive.
 2. In the assistant's settings, choose a preset or protocol, enter the API base URL, model ID, and API key. Local services without authentication can leave the key empty. **测试连接** (Test Connection) sends a short request to that service.
 3. Right-click an item in Cleanup Items, Large Files, or Important Data, then select **发送给 AI 分析** (Send to AI). Analysis starts immediately; no extra Enter is required. On first use, **保存并分析** (Save & Analyze) continues the pending request after configuration.
 4. Ask follow-up questions, stop a response, retry a failed request, or start a new conversation. The minus button collapses the panel back to its icon; settings can hide the icon.
 
-Saved API keys are reused in memory while Qingfeng runs, separately for each protocol and service address. Opening settings does not read Keychain. Leave the key field blank to keep the saved key, enter a new key to replace it, or select **保存时移除此服务的密钥** to remove it on save. Chat, file analysis, retries, and connection tests read credentials without requesting a password dialog, including the first request after launch. If Keychain is locked or denies access after an app update, the request remains in the conversation with an **授权并发送** (Authorize & Send) button. Only that button or **授权读取已存密钥…** in settings explicitly allows macOS authorization. Saving a replacement key can also require authorization.
+Model configuration and API keys are encrypted locally with AES-256-GCM in `~/Library/Application Support/Qingfeng/AI/`, outside the app bundle, so replacing or restarting Qingfeng keeps them. Keys are isolated by protocol and service address. Leave the key field blank to preserve it, enter a new key to replace it, or select **保存时移除此服务的密钥** to remove it on save. Qingfeng no longer uses macOS Keychain or presents credential authorization dialogs.
+
+**Upgrading from 1.2.5 or earlier:** the endpoint and model migrate automatically. Re-enter your API key once in the assistant settings; Qingfeng does not read the old Keychain entry. After saving, chat, file analysis, connection testing, and future launches reuse the local key.
+
+The encryption key is unique to this installation and stored locally alongside the encrypted settings, with user-only directory/file permissions. This protects stored contents but cannot protect against software that can read both files as your user. Back up the whole `AI` directory together.
 
 | Protocol | Examples |
 | --- | --- |
@@ -178,7 +182,7 @@ Scanning and cleanup operate locally without network access, analytics, or sign-
 
 History is limited to 2,000 entries. Exported reports and history contain local paths; review them before sharing.
 
-AI is opt-in through your own service configuration. Sending a question or selected file analysis sends conversation context and selected metadata (name, file and folder paths, directory-purpose clues, type, sizes, counts, dates, scan completeness, and protection notes) to that endpoint. Ollama analysis reads bounded small JSON files from the selected blob's sibling `manifests` directory locally, sending only matching model tags, layer types, declared sizes, reference paths, and lookup status. Other manifest fields are excluded. The current home prefix is replaced with `~`; remaining paths and model names can still be personal. **The selected file's body and the full scan report are not uploaded.** Connection testing sends only a test question. API keys are stored in macOS Keychain, while nonsecret model settings are stored locally. Conversations are kept in memory, with up to 16 recent messages used for context. Your provider's retention policies apply to remote requests. You can use a local Ollama or LM Studio endpoint.
+AI is opt-in through your own service configuration. Sending a question or selected file analysis sends conversation context and selected metadata (name, file and folder paths, directory-purpose clues, type, sizes, counts, dates, scan completeness, and protection notes) to that endpoint. Ollama analysis reads bounded small JSON files from the selected blob's sibling `manifests` directory locally, sending only matching model tags, layer types, declared sizes, reference paths, and lookup status. Other manifest fields are excluded. The current home prefix is replaced with `~`; remaining paths and model names can still be personal. **The selected file's body and the full scan report are not uploaded.** Connection testing sends only a test question. Model settings and API keys are encrypted in Qingfeng's local application-data directory; no Keychain access is used. Conversations are kept in memory, with up to 16 recent messages used for context. Your provider's retention policies apply to remote requests. You can use a local Ollama or LM Studio endpoint.
 
 ## Development
 

@@ -76,7 +76,6 @@ final class HistoryStore: @unchecked Sendable {
     @Published var inventoryLimitText: String
     let assistant: AssistantModel
     let isPreview: Bool
-    private lazy var assistantWindow = AssistantWindowController(model: assistant)
     private var cancellation = CancellationFlag()
     private let store = HistoryStore()
     private static let directoryLimitKey = "Qingfeng.directoryScanLimit"
@@ -131,10 +130,9 @@ final class HistoryStore: @unchecked Sendable {
         }
     }
 
-    func openAssistant() { assistantWindow.showConversation() }
-    func attachAssistant(_ container: AssistantBubbleContainer) { if !isPreview { assistantWindow.attach(container) } }
+    func openAssistant() { assistant.conversationVisible = true }
     func analyze(_ item: ScanItem) {
-        assistantWindow.showConversation()
+        openAssistant()
         assistant.analyze(item)
     }
 

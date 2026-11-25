@@ -1,10 +1,9 @@
 import AppKit
 import SwiftUI
-import Security
 import QingfengCore
 
 // Exercise the real analysis/send/retry paths with synthetic secrets and responses.
-// No user defaults, user Keychain items, or external model services are accessed.
+// No real user settings, credentials, or external model services are accessed.
 @MainActor private final class CredentialProbe {
     var stored: [String: String] = [:]
     var reads = 0
@@ -13,18 +12,23 @@ import QingfengCore
     var denyWrite = false
     var transportError: Error?
     var sentKeys: [String] = []
-    var interactionRequests: [Bool] = []
 
     func session() -> AICredentialSession {
-        AICredentialSession(read: { config, allowInteraction in
+        AICredentialSession(read: { config in
             self.reads += 1
-            self.interactionRequests.append(allowInteraction)
-            if self.denyRead { throw AIServiceError.configuration("Synthetic Keychain denial") }
+            if self.denyRead { throw AIServiceError.configuration("Synthetic storage denial") }
             return self.stored[config.credentialAccount] ?? ""
-        }, write: { key, config in
-            self.writes += 1
-            if self.denyWrite { throw AIServiceError.configuration("Synthetic Keychain write failure") }
-            self.stored[config.credentialAccount] = key
+        }, write: { config, edit in
+            if self.denyWrite { throw AIServiceError.configuration("Synthetic storage write failure") }
+            switch edit {
+            case .unchanged: break
+            case .replace(let key):
+                self.writes += 1
+                self.stored[config.credentialAccount] = key.trimmingCharacters(in: .whitespacesAndNewlines)
+            case .remove:
+                self.writes += 1
+                self.stored[config.credentialAccount] = ""
+            }
         })
     }
 
@@ -84,8 +88,7 @@ import QingfengCore
         model.clear(); model.analyze(item); try await settled(model)
         precondition(probe.reads == 1 && probe.writes == 0)
         precondition(probe.sentKeys == Array(repeating: "test-key-one", count: 6))
-        precondition(probe.interactionRequests == [false])
-        print("PASS repeated right-click analysis, follow-up, retry and new chat reuse one Keychain read")
+        print("PASS repeated right-click analysis, follow-up, retry and new chat reuse one local credential read")
 
         try await openSettings(model)
         var otherModel = config; otherModel.model = "another-model"
@@ -150,124 +153,27 @@ import QingfengCore
         let deniedProbe = CredentialProbe(); deniedProbe.denyRead = true
         let denied = deniedProbe.model(); denied.configuration = config
         try await ask(denied)
-        for _ in 0..<3 { denied.analyze(item); try await settled(denied) }
-        precondition(deniedProbe.reads == 1 && deniedProbe.sentKeys.isEmpty)
-        precondition(denied.credentialAccessBlocked && denied.error != nil && !denied.showSettings)
+        precondition(denied.error != nil && !denied.showSettings && deniedProbe.sentKeys.isEmpty)
         try await openSettings(denied)
-        try denied.save(config)
-        denied.clear(); try await ask(denied)
+        deniedProbe.denyRead = false; deniedProbe.stored[config.credentialAccount] = "test-key-restored"
         denied.retry(); try await settled(denied)
-        precondition(deniedProbe.reads == 1 && denied.credentialAccessBlocked && !denied.showSettings)
-        precondition(deniedProbe.interactionRequests == [false])
-        deniedProbe.denyRead = false; deniedProbe.stored[config.credentialAccount] = "test-key-unlocked"
-        denied.authorizeAndRetry(); try await settled(denied)
         denied.analyze(item); try await settled(denied)
-        precondition(deniedProbe.reads == 2 && deniedProbe.sentKeys == ["test-key-unlocked", "test-key-unlocked"])
-        precondition(!denied.credentialAccessBlocked && denied.error == nil && !denied.showSettings)
-        precondition(deniedProbe.interactionRequests == [false, true])
-        print("PASS first chat, right-click and retry forbid authorization UI; only explicit authorization permits it")
+        precondition(deniedProbe.sentKeys == ["test-key-restored", "test-key-restored"])
+        precondition(denied.error == nil && !denied.showSettings)
+        print("PASS local storage errors stay inline and retry succeeds after recovery without any authorization action")
 
         let httpProbe = CredentialProbe(); httpProbe.stored[config.credentialAccount] = "test-key-http"
         httpProbe.transportError = AIServiceError.http(401)
         let http = httpProbe.model(); http.configuration = config
         try await ask(http)
-        precondition(http.error != nil && !http.credentialAccessBlocked && !http.showSettings)
+        precondition(http.error != nil && !http.showSettings)
         http.retry(); try await settled(http)
         precondition(httpProbe.reads == 1 && httpProbe.sentKeys.count == 2 && !http.showSettings)
         let restarted = httpProbe.model(); restarted.configuration = config
         httpProbe.transportError = nil
         try await ask(restarted)
         precondition(httpProbe.reads == 2 && restarted.error == nil)
-        precondition(httpProbe.interactionRequests == [false, false])
-        print("PASS service authentication errors do not reopen settings; a new app session reads Keychain afresh")
-
-        let settingsProbe = CredentialProbe(); settingsProbe.denyRead = true
-        let settings = settingsProbe.model(); settings.configuration = config
-        do { _ = try settings.keyForConnectionTest(config, credential: .unchanged); preconditionFailure("Expected access failure") }
-        catch { }
-        precondition(settingsProbe.interactionRequests == [false])
-        settingsProbe.denyRead = false
-        try settings.authorizeCredential(config)
-        precondition(settingsProbe.interactionRequests == [false, true])
-        print("PASS connection testing is silent; settings authorization is a separate explicit action")
-
-        try checkLegacyInteractionGate()
-        try checkLockedTestKeychain()
-        print("Assistant credential checks: 11/11 passed")
-    }
-
-    static func checkLegacyInteractionGate() throws {
-        var original: DarwinBoolean = true
-        precondition(SecKeychainGetUserInteractionAllowed(&original) == errSecSuccess)
-        try AISecretStore.withInteraction(allowed: false) {
-            var current: DarwinBoolean = true
-            precondition(SecKeychainGetUserInteractionAllowed(&current) == errSecSuccess && !current.boolValue)
-        }
-        var restored: DarwinBoolean = false
-        precondition(SecKeychainGetUserInteractionAllowed(&restored) == errSecSuccess && restored.boolValue == original.boolValue)
-        do {
-            try AISecretStore.withInteraction(allowed: false) { throw AIServiceError.configuration("Synthetic failure") }
-        } catch { }
-        precondition(SecKeychainGetUserInteractionAllowed(&restored) == errSecSuccess && restored.boolValue == original.boolValue)
-        print("PASS actual legacy Keychain interaction gate forbids UI and restores prior state after success or failure")
-    }
-
-    static func checkLockedTestKeychain() throws {
-        let directory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-            .appendingPathComponent(".build/KeychainChecks/" + UUID().uuidString)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let password = "synthetic-test-password"
-        var keychain: SecKeychain?
-        let created = SecKeychainCreate(directory.appendingPathComponent("test.keychain").path,
-                                       UInt32(password.utf8.count), password, false, nil, &keychain)
-        precondition(created == errSecSuccess && keychain != nil, "Cannot create isolated test keychain: \(created)")
-        defer {
-            SecKeychainUnlock(keychain, UInt32(password.utf8.count), password, true)
-            SecKeychainDelete(keychain)
-        }
-        let config = AIConfiguration(baseURL: "https://keychain-check.example.invalid/" + UUID().uuidString, model: "test")
-        let service = "local.qingfeng.mac.ai", account = config.credentialAccount, secret = "synthetic-value"
-        let added = SecKeychainAddGenericPassword(keychain, UInt32(service.utf8.count), service,
-            UInt32(account.utf8.count), account, UInt32(secret.utf8.count), secret, nil)
-        precondition(added == errSecSuccess, "Cannot add synthetic key: \(added)")
-        let value = try AISecretStore.read(config, keychain: keychain)
-        precondition(value == secret)
-        precondition(SecKeychainLock(keychain) == errSecSuccess)
-        let start = Date()
-        do {
-            _ = try AISecretStore.read(config, keychain: keychain)
-            preconditionFailure("Locked test keychain must not return a secret")
-        } catch {
-            let status = (error as NSError).code
-            let elapsed = Date().timeIntervalSince(start)
-            print("Locked synthetic keychain: status \(status), returned in \(elapsed)s")
-            precondition(status == Int(errSecInteractionNotAllowed), "Unexpected silent-read status: \(status)")
-        }
-        precondition(Date().timeIntervalSince(start) < 2, "Silent key lookup waited for authorization")
-        print("PASS real locked synthetic keychain returns interaction-not-allowed without opening an authorization dialog")
-
-        precondition(SecKeychainUnlock(keychain, UInt32(password.utf8.count), password, true) == errSecSuccess)
-        var trusted: SecTrustedApplication?
-        precondition(SecTrustedApplicationCreateFromPath("/usr/bin/true", &trusted) == errSecSuccess)
-        var access: SecAccess?
-        precondition(SecAccessCreate("Qingfeng synthetic restricted key" as CFString, [trusted!] as CFArray, &access) == errSecSuccess)
-        let restricted = AIConfiguration(baseURL: "https://restricted-key.example.invalid/" + UUID().uuidString, model: "test")
-        var attributes = AISecretStore.query(restricted)
-        attributes[kSecUseKeychain as String] = keychain!
-        attributes[kSecAttrAccess as String] = access!
-        attributes[kSecValueData as String] = Data(secret.utf8)
-        precondition(SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess)
-        let restrictedStart = Date()
-        do {
-            _ = try AISecretStore.read(restricted, keychain: keychain)
-            preconditionFailure("Restricted key must not be disclosed to an untrusted reader")
-        } catch {
-            let status = (error as NSError).code
-            print("Restricted synthetic key: status \(status), returned in \(Date().timeIntervalSince(restrictedStart))s")
-            precondition([Int(errSecInteractionNotAllowed), Int(errSecAuthFailed)].contains(status), "Restricted read returned \(status)")
-        }
-        precondition(Date().timeIntervalSince(restrictedStart) < 2, "Restricted key waited for authorization")
-        print("PASS real key restricted to another signed app is rejected without an authorization dialog")
+        print("PASS service authentication errors do not reopen settings and a new session reloads its saved credential")
+        print("Assistant credential checks: 8/8 passed")
     }
 }

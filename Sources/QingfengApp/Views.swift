@@ -23,7 +23,7 @@ struct RootView: View {
         .background(Theme.background).foregroundStyle(Theme.ink)
         .tint(Theme.accent).preferredColorScheme(.light)
         .overlay {
-            AssistantBubbleLayer(model: model.assistant, attach: model.attachAssistant, open: model.openAssistant)
+            AssistantBubbleLayer(model: model.assistant)
                 .clipped()
         }
         .sheet(isPresented: $model.showConfirmation) { confirmation }
