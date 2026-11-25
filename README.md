@@ -17,7 +17,7 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**[Download Qingfeng 1.2.4 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.4/Qingfeng-1.2.4-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.4)
+**[Download Qingfeng 1.2.5 for Apple Silicon](https://github.com/zealerFT/qingfeng/releases/download/v1.2.5/Qingfeng-1.2.5-AppleSilicon.zip)** · [Release notes](https://github.com/zealerFT/qingfeng/releases/tag/v1.2.5)
 
 macOS 14 or later · Ready-to-run app · No Xcode or compilation required
 
@@ -34,7 +34,7 @@ The app is built with **SwiftUI and AppKit**, with no third-party dependencies. 
 - **Inspect important data.** Models, container storage, device backups, Xcode archives, and IDE local history are view-only.
 - **Find more large files.** Scan your home, hidden directories, Library, and Applications; filter by file type and compare file size with allocated disk space.
 - **Adjust scan limits.** Configure directory and inventory limits independently, plus the minimum file size. Incomplete results are labeled.
-- **Ask AI about a file.** Right-click a file to analyze it immediately. A draggable desktop icon opens a streaming conversation with configurable cloud or local models.
+- **Ask AI about a file.** Right-click a file to analyze it immediately. An icon inside the main window opens a streaming conversation with configurable cloud or local models.
 - **Scan locally.** Scanning and cleanup work offline. AI requests run only when you send a question, choose file analysis, or test your configured service. No telemetry or Qingfeng account.
 
 > Moving files to Trash does **not** immediately reclaim disk space. Review or restore them in Finder, then empty Trash yourself when ready. Qingfeng never empties it for you.
@@ -54,11 +54,11 @@ Not every supported macOS version and Apple Silicon model has been tested. Intel
 
 ### Packaged app
 
-1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.4/Qingfeng-1.2.4-AppleSilicon.zip)** (`Qingfeng-1.2.4-AppleSilicon.zip`).
+1. **[Download the Apple Silicon app](https://github.com/zealerFT/qingfeng/releases/download/v1.2.5/Qingfeng-1.2.5-AppleSilicon.zip)** (`Qingfeng-1.2.5-AppleSilicon.zip`).
 2. Quit Qingfeng, double-click the ZIP to extract it, then drag **清风.app** into **Applications**. Choose **Replace** if an earlier version is installed.
 3. Open **清风** from Applications. No developer tools or compilation are needed.
 
-The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.4-AppleSilicon.zip**.
+The automatically generated **Source code** downloads on the [release page](https://github.com/zealerFT/qingfeng/releases/latest) are for developers; the app download is the ZIP named **Qingfeng-1.2.5-AppleSilicon.zip**.
 
 Current packages use an **ad-hoc signature** and are **not notarized by Apple**. If macOS blocks an app you have downloaded from this repository and trust, try opening it once, then use **System Settings → Privacy & Security → Open Anyway**, if offered. You can also build from source.
 
@@ -111,12 +111,12 @@ Select eligible files with checkboxes or **全选当前结果** (Select All Curr
 
 ### AI assistant
 
-1. Open **AI 助手** or click the floating sparkle icon. Drag the icon across the desktop and displays; the assistant can join other apps' full-screen spaces and Stage Manager groups while Qingfeng is running. Drag the conversation's title area to move it, and click **−** to collapse it. Toolbar buttons accept the first click even while Qingfeng is inactive.
+1. Open **AI 助手** or click the sparkle icon inside Qingfeng. The icon can be dragged within the main window and follows it when moved, resized, or minimized. Drag the conversation's title area to move it, and click **−** to return to the icon in the main window. Toolbar buttons accept the first click even while Qingfeng is inactive.
 2. In the assistant's settings, choose a preset or protocol, enter the API base URL, model ID, and API key. Local services without authentication can leave the key empty. **测试连接** (Test Connection) sends a short request to that service.
 3. Right-click an item in Cleanup Items, Large Files, or Important Data, then select **发送给 AI 分析** (Send to AI). Analysis starts immediately; no extra Enter is required. On first use, **保存并分析** (Save & Analyze) continues the pending request after configuration.
 4. Ask follow-up questions, stop a response, retry a failed request, or start a new conversation. The minus button collapses the panel back to its icon; settings can hide the icon.
 
-Saved API keys are reused in memory while Qingfeng runs, separately for each protocol and service address. Opening settings does not read Keychain. Leave the key field blank to keep the saved key, enter a new key to replace it, or select **保存时移除此服务的密钥** to remove it on save. If Keychain access is denied, an inline **解锁并重试** (Unlock & Retry) button lets you try again; repeated file analyses do not repeat the authorization prompt. After an ad-hoc-signed app update, macOS may ask you to authorize the saved key on first use.
+Saved API keys are reused in memory while Qingfeng runs, separately for each protocol and service address. Opening settings does not read Keychain. Leave the key field blank to keep the saved key, enter a new key to replace it, or select **保存时移除此服务的密钥** to remove it on save. Chat, file analysis, retries, and connection tests read credentials without requesting a password dialog, including the first request after launch. If Keychain is locked or denies access after an app update, the request remains in the conversation with an **授权并发送** (Authorize & Send) button. Only that button or **授权读取已存密钥…** in settings explicitly allows macOS authorization. Saving a replacement key can also require authorization.
 
 | Protocol | Examples |
 | --- | --- |

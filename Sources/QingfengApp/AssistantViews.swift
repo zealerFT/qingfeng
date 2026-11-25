@@ -58,7 +58,11 @@ struct AssistantView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(error).font(.system(size: 12)).foregroundStyle(Theme.amber)
                                     HStack {
-                                        Button(model.credentialAccessBlocked ? "解锁并重试" : "重试") { model.retry() }.disabled(model.busy)
+                                        if model.credentialAccessBlocked {
+                                            Button("授权并发送") { model.authorizeAndRetry() }.disabled(model.busy)
+                                        } else {
+                                            Button("重试") { model.retry() }.disabled(model.busy)
+                                        }
                                         Button("检查配置") { model.showSettings = true }.disabled(model.busy)
                                     }.font(.system(size: 12))
                                 }.padding(12)
@@ -151,9 +155,15 @@ struct AISettingsView: View {
                         .textFieldStyle(.roundedBorder).disabled(removeSavedKey)
                     Text("密钥安全保存在 macOS 钥匙串，解锁后在本次运行中复用。首次配置无鉴权的本机服务可留空。")
                         .font(.system(size: 10)).foregroundStyle(Theme.muted)
+                    Button("授权读取已存密钥…") {
+                        do {
+                            try model.authorizeCredential(draft)
+                            message = "已读取此服务的密钥，可以直接对话。"
+                        } catch { message = error.localizedDescription }
+                    }.font(.system(size: 11)).disabled(testing)
                     Toggle("保存时移除此服务的密钥", isOn: $removeSavedKey).font(.system(size: 11))
                 }
-                Toggle("显示可拖动的桌面悬浮图标", isOn: $model.floatingIconEnabled).font(.system(size: 12))
+                Toggle("在清风窗口内显示 AI 悬浮图标", isOn: $model.floatingIconEnabled).font(.system(size: 12))
                 Text("主动发送时，提问及所选文件的位置（主目录显示为 ~）、类型、大小、时间和目录用途会发给上述服务。Ollama 哈希文件会在本地读取同目录的小型模型索引，仅发送匹配的模型标签、层类型与引用来源。可在对话中展开查看分析资料；不上传所选文件正文或整盘报告，AI 不会自动清理。")
                     .font(.system(size: 11)).foregroundStyle(Theme.muted).lineSpacing(4)
                 if let pending = model.pendingAnalysis {

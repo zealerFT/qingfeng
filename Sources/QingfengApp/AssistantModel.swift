@@ -3,21 +3,48 @@ import SwiftUI
 import Security
 import QingfengCore
 
-enum AISecretStore {
+@MainActor enum AISecretStore {
     static func query(_ config: AIConfiguration) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: "local.qingfeng.mac.ai",
          kSecAttrAccount as String: config.credentialAccount]
     }
-    static func read(_ config: AIConfiguration) throws -> String {
-        var request = query(config)
-        request[kSecReturnData as String] = true
-        request[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(request as CFDictionary, &result)
+    // Existing releases use the legacy login keychain. Gate its UI for the entire
+    // synchronous read; do not let SecItem's bridge substitute a different UI policy.
+    static func withInteraction<T>(allowed: Bool, _ operation: () throws -> T) throws -> T {
+        var previous: DarwinBoolean = true
+        let status = SecKeychainGetUserInteractionAllowed(&previous)
+        guard status == errSecSuccess else { throw error(status) }
+        let changed = SecKeychainSetUserInteractionAllowed(allowed)
+        guard changed == errSecSuccess else { throw error(changed) }
+        defer { SecKeychainSetUserInteractionAllowed(previous.boolValue) }
+        return try operation()
+    }
+
+    static func read(_ config: AIConfiguration, allowInteraction: Bool = false, keychain: SecKeychain? = nil) throws -> String {
+        var target = keychain
+        if target == nil {
+            let status = SecKeychainCopyDefault(&target)
+            guard status == errSecSuccess else { throw error(status) }
+        }
+        if !allowInteraction {
+            var state: SecKeychainStatus = 0
+            let status = SecKeychainGetStatus(target, &state)
+            guard status == errSecSuccess else { throw error(status) }
+            guard state & SecKeychainStatus(kSecUnlockStateStatus) != 0 else { throw error(errSecInteractionNotAllowed) }
+        }
+        let service = "local.qingfeng.mac.ai", account = config.credentialAccount
+        var length: UInt32 = 0
+        var bytes: UnsafeMutableRawPointer?
+        let status = try withInteraction(allowed: allowInteraction) {
+            SecKeychainFindGenericPassword(target, UInt32(service.utf8.count), service,
+                UInt32(account.utf8.count), account, &length, &bytes, nil)
+        }
         if status == errSecItemNotFound { return "" }
-        guard status == errSecSuccess, let data = result as? Data else { throw error(status) }
-        return String(decoding: data, as: UTF8.self)
+        guard status == errSecSuccess else { throw error(status) }
+        guard let bytes else { return "" }
+        defer { SecKeychainItemFreeContent(nil, bytes) }
+        return String(decoding: Data(bytes: bytes, count: Int(length)), as: UTF8.self)
     }
     static func save(_ key: String, config: AIConfiguration) throws {
         let request = query(config)
@@ -35,7 +62,7 @@ enum AISecretStore {
     }
     private static func error(_ status: OSStatus) -> NSError {
         NSError(domain: "QingfengKeychain", code: Int(status),
-                userInfo: [NSLocalizedDescriptionKey: "无法访问钥匙串（\(status)）。请允许清风访问自己保存的 AI 密钥后重试。"])
+                userInfo: [NSLocalizedDescriptionKey: "已保存的密钥暂时无法静默读取（\(status)）。点击「授权并发送」可允许 macOS 验证，或在设置中更新密钥。"])
     }
 }
 
@@ -48,25 +75,25 @@ enum AICredentialEdit {
 @MainActor final class AICredentialSession {
     private enum Entry { case reading, loaded(String), failed(Error) }
     private var entries: [String: Entry] = [:]
-    private let readSecret: (AIConfiguration) throws -> String
-    private let writeSecret: (String, AIConfiguration) throws -> Void
+    private let readSecret: @MainActor (AIConfiguration, Bool) throws -> String
+    private let writeSecret: @MainActor (String, AIConfiguration) throws -> Void
 
-    init(read: @escaping (AIConfiguration) throws -> String = AISecretStore.read,
-         write: @escaping (String, AIConfiguration) throws -> Void = AISecretStore.save) {
+    init(read: @escaping @MainActor (AIConfiguration, Bool) throws -> String = { try AISecretStore.read($0, allowInteraction: $1) },
+         write: @escaping @MainActor (String, AIConfiguration) throws -> Void = AISecretStore.save) {
         readSecret = read; writeSecret = write
     }
 
-    func key(for config: AIConfiguration, retryAccess: Bool = false) throws -> String {
+    func key(for config: AIConfiguration, allowInteraction: Bool = false) throws -> String {
         let account = config.credentialAccount
         switch entries[account] {
         case .loaded(let key): return key
-        case .failed(let error) where !retryAccess: throw error
+        case .failed(let error) where !allowInteraction: throw error
         case .reading: throw AIServiceError.configuration("正在读取此服务的密钥，请先完成 macOS 授权。")
         default: break
         }
         entries[account] = .reading
         do {
-            let key = try readSecret(config)
+            let key = try readSecret(config, allowInteraction)
             entries[account] = .loaded(key)
             return key
         } catch {
@@ -101,6 +128,7 @@ struct AssistantMessage: Identifiable {
     @Published var input = ""
     @Published var busy = false
     @Published var showSettings = false
+    @Published var conversationVisible = false
     @Published var error: String?
     @Published private(set) var credentialAccessBlocked = false
     @Published var pendingAnalysis: String?
@@ -124,7 +152,7 @@ struct AssistantMessage: Identifiable {
          }) {
         self.preview = preview
         self.credentials = credentials ?? (preview
-            ? AICredentialSession(read: { _ in "" }, write: { _, _ in }) : AICredentialSession())
+            ? AICredentialSession(read: { _, _ in "" }, write: { _, _ in }) : AICredentialSession())
         self.stream = stream
         if !preview, let data = UserDefaults.standard.data(forKey: Self.settingsKey),
            let config = try? JSONDecoder().decode(AIConfiguration.self, from: data) { configuration = config }
@@ -150,10 +178,13 @@ struct AssistantMessage: Identifiable {
     }
     func keyForConnectionTest(_ config: AIConfiguration, credential: AICredentialEdit) throws -> String {
         switch credential {
-        case .unchanged: return try credentials.key(for: config, retryAccess: true)
+        case .unchanged: return try credentials.key(for: config)
         case .replace(let value): return value.trimmingCharacters(in: .whitespacesAndNewlines)
         case .remove: return ""
         }
+    }
+    func authorizeCredential(_ config: AIConfiguration) throws {
+        _ = try credentials.key(for: config, allowInteraction: true)
     }
     func analyze(_ item: ScanItem) {
         stop()
@@ -191,11 +222,11 @@ struct AssistantMessage: Identifiable {
         }
         start(turns)
     }
-    private func start(_ turns: [AIChatTurn], retryCredentialAccess: Bool = false) {
+    private func start(_ turns: [AIChatTurn], allowCredentialInteraction: Bool = false) {
         stop(); error = nil; credentialAccessBlocked = false
         lastRequest = turns; lastResponseID = nil
         let key: String
-        do { key = try credentials.key(for: configuration, retryAccess: retryCredentialAccess) }
+        do { key = try credentials.key(for: configuration, allowInteraction: allowCredentialInteraction) }
         catch { self.error = error.localizedDescription; credentialAccessBlocked = true; return }
         let config = configuration
         let response = AssistantMessage(role: .assistant, text: "")
@@ -221,7 +252,11 @@ struct AssistantMessage: Identifiable {
     func retry() {
         guard !busy, !lastRequest.isEmpty else { return }
         messages.removeAll { $0.id == lastResponseID }
-        start(lastRequest, retryCredentialAccess: credentialAccessBlocked)
+        start(lastRequest)
+    }
+    func authorizeAndRetry() {
+        guard !busy, credentialAccessBlocked, !lastRequest.isEmpty else { return }
+        start(lastRequest, allowCredentialInteraction: true)
     }
     func stop() {
         generation = UUID(); task?.cancel(); task = nil; busy = false; preparingAnalysis = nil

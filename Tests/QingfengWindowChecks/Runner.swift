@@ -38,16 +38,15 @@ private final class DragProbePanel: NSPanel {
         precondition(screens[0].contains(NSRect(origin: restored, size: size)))
         print("PASS destination screen selection, negative coordinates and disconnected-screen recovery")
 
-        let panel = DragProbePanel(contentRect: NSRect(x: 300, y: 300, width: 64, height: 64),
+        let panel = DragProbePanel(contentRect: NSRect(x: 300, y: 300, width: 1180, height: 800),
                                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        let bubble = FloatingAssistantButton(frame: NSRect(origin: .zero, size: size))
-        panel.contentView = bubble
+        let container = AssistantBubbleContainer(preview: true)
+        panel.contentView = container
+        container.layoutSubtreeIfNeeded()
+        let bubble = container.bubble
         var opened = 0, completedDrags = 0
         bubble.open = { opened += 1 }
-        bubble.didDrag = {
-            completedDrags += 1
-            panel.setFrameOrigin(AssistantWindowPlacement.visibleOrigin(panel.frame.origin, size: size, screens: screens))
-        }
+        bubble.didDrag = { completedDrags += 1 }
         func event(_ type: NSEvent.EventType, _ point: NSPoint) -> NSEvent {
             NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: 0,
                               windowNumber: panel.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
@@ -57,16 +56,34 @@ private final class DragProbePanel: NSPanel {
         bubble.mouseDragged(with: event(.leftMouseDragged, NSPoint(x: 33, y: 33)))
         bubble.mouseUp(with: event(.leftMouseUp, NSPoint(x: 33, y: 33)))
         precondition(opened == 1 && panel.dragCount == 0)
-        bubble.mouseDown(with: event(.leftMouseDown, NSPoint(x: 32, y: 32)))
-        bubble.mouseDragged(with: event(.leftMouseDragged, NSPoint(x: 600, y: 200)))
-        precondition(panel.dragEventType == .leftMouseDown && completedDrags == 0)
-        bubble.mouseUp(with: event(.leftMouseUp, NSPoint(x: 600, y: 200)))
-        precondition(panel.dragCount == 1 && completedDrags == 1 && opened == 1)
-        precondition(panel.frame.origin == panel.destination)
+        let originalWindowFrame = panel.frame
+        for destination in [NSPoint(x: -4000, y: 400), NSPoint(x: 4000, y: 400),
+                            NSPoint(x: 500, y: -4000), NSPoint(x: 500, y: 4000)] {
+            bubble.mouseDown(with: event(.leftMouseDown, NSPoint(x: 32, y: 32)))
+            bubble.mouseDragged(with: event(.leftMouseDragged, destination))
+            // Check during dragging, not just after mouse-up.
+            precondition(container.bounds.insetBy(dx: 8, dy: 8).contains(bubble.frame))
+            bubble.mouseUp(with: event(.leftMouseUp, destination))
+            precondition(container.bounds.insetBy(dx: 8, dy: 8).contains(bubble.frame))
+        }
+        precondition(panel.dragCount == 0 && completedDrags == 4 && opened == 1)
+        precondition(panel.frame == originalWindowFrame)
+        panel.setContentSize(NSSize(width: 700, height: 500))
+        container.layoutSubtreeIfNeeded()
+        precondition(container.bounds.contains(bubble.frame))
+        let localOrigin = bubble.frame.origin
+        panel.setFrameOrigin(NSPoint(x: -1500, y: 500))
+        precondition(bubble.frame.origin == localOrigin && bubble.window === panel)
+        precondition(container.hitTest(NSPoint(x: 200, y: 200)) == nil)
+        let center = bubble.convert(NSPoint(x: 32, y: 32), to: container.superview)
+        precondition(container.hitTest(center) === bubble)
+        bubble.isHidden = true
+        precondition(container.hitTest(center) == nil)
+        bubble.isHidden = false
         bubble.mouseDown(with: event(.leftMouseDown, NSPoint(x: 32, y: 32)))
         bubble.mouseUp(with: event(.leftMouseUp, NSPoint(x: 32, y: 32)))
         precondition(opened == 2)
-        print("PASS inactive first click, click jitter, native drag outside original window and next click")
+        print("PASS icon stays inside main window during all four edge drags, resize and window movement; background stays clickable")
 
         let model = AssistantModel(preview: true)
         var collapsed = 0
@@ -109,6 +126,27 @@ private final class DragProbePanel: NSPanel {
         let before = collapsed; bar.collapseButton.performClick(nil)
         precondition(collapsed == before + 1)
         print("PASS collapse remains available during analysis")
-        print("Assistant window checks: 4/4 passed")
+
+        let appModel = AppModel(preview: true)
+        appModel.assistant.floatingIconEnabled = true
+        let rootHost = NSHostingView(rootView: RootView(model: appModel))
+        let rootPanel = DragProbePanel(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 800),
+                                     styleMask: [.borderless], backing: .buffered, defer: false)
+        rootPanel.contentView = rootHost
+        rootHost.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        rootHost.layoutSubtreeIfNeeded()
+        let embedded = descendants(rootHost).compactMap { $0 as? AssistantBubbleContainer }.first!
+        precondition(embedded.bubble.window === rootPanel && !embedded.bubble.isHidden)
+        let iconPoint = embedded.bubble.convert(NSPoint(x: 32, y: 32), to: rootHost.superview)
+        precondition(rootHost.hitTest(iconPoint) === embedded.bubble)
+        appModel.assistant.conversationVisible = true
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        precondition(embedded.bubble.isHidden)
+        appModel.assistant.conversationVisible = false
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        precondition(!embedded.bubble.isHidden)
+        print("PASS real main view embeds icon in the same window and hides/restores it when the conversation opens/collapses")
+        print("Assistant window checks: 5/5 passed")
     }
 }

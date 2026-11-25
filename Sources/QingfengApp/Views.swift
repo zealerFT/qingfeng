@@ -22,6 +22,10 @@ struct RootView: View {
         .frame(minWidth: 1080, minHeight: 730)
         .background(Theme.background).foregroundStyle(Theme.ink)
         .tint(Theme.accent).preferredColorScheme(.light)
+        .overlay {
+            AssistantBubbleLayer(model: model.assistant, attach: model.attachAssistant, open: model.openAssistant)
+                .clipped()
+        }
         .sheet(isPresented: $model.showConfirmation) { confirmation }
         .sheet(isPresented: $model.showIssues) { issueSheet }
         .sheet(isPresented: $model.showSettings) { settings }
@@ -29,7 +33,6 @@ struct RootView: View {
             Button("知道了") { model.notice = nil }
         } message: { Text(model.notice ?? "") }
         .onChange(of: model.page) { _, _ in model.search = "" }
-        .onAppear { model.showAssistantIcon() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             if !model.isPreview { model.refreshDisk() }
         }

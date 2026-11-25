@@ -132,7 +132,7 @@ final class HistoryStore: @unchecked Sendable {
     }
 
     func openAssistant() { assistantWindow.showConversation() }
-    func showAssistantIcon() { if !isPreview { assistantWindow.showIconIfEnabled() } }
+    func attachAssistant(_ container: AssistantBubbleContainer) { if !isPreview { assistantWindow.attach(container) } }
     func analyze(_ item: ScanItem) {
         assistantWindow.showConversation()
         assistant.analyze(item)
